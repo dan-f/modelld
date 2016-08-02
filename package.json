@@ -1,0 +1,25 @@
+{
+  "name": "ld-lens",
+  "version": "0.1.0",
+  "description": "A JavaScript API for selecting and manipulating linked data subgraphs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dan-f/ld-lens.git"
+  },
+  "keywords": [
+    "linkeddata",
+    "rdf",
+    "semantic",
+    "web"
+  ],
+  "author": "Daniel Friedman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dan-f/ld-lens/issues"
+  },
+  "homepage": "https://github.com/dan-f/ld-lens#readme"
+}
