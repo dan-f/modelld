@@ -4,6 +4,9 @@
   "description": "A JavaScript API for selecting and manipulating linked data subgraphs",
   "main": "index.js",
   "scripts": {
+    "build": "npm run build:lib && npm run build:bundle",
+    "build:lib": "babel src -d lib",
+    "build:bundle": "echo \"Error: not yet implemented\" && exit 1",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,5 +24,13 @@
   "bugs": {
     "url": "https://github.com/dan-f/ld-lens/issues"
   },
-  "homepage": "https://github.com/dan-f/ld-lens#readme"
+  "homepage": "https://github.com/dan-f/ld-lens#readme",
+  "devDependencies": {
+    "babel-cli": "^6.11.4",
+    "babel-preset-es2015": "^6.9.0"
+  },
+  "dependencies": {
+    "immutable": "^3.8.1",
+    "rdflib": "^0.7.2"
+  }
 }
