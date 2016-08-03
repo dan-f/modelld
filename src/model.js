@@ -1,15 +1,15 @@
 import Field from './field'
 
 /**
- * TODO: Description of what a lens is.
+ * TODO: Description of what a model is.
  *
- * TODO: example use of a lens
+ * TODO: example use of a model
  */
-class Lens {
+class Model {
   /**
-   * TODO: Description of how to instantiate a lens.
+   * TODO: Description of how to instantiate a model.
    *
-   * TODO: example of instantiating a lens
+   * TODO: example of instantiating a model
    *
    * TODO: JSDoc arguments
    */
@@ -24,7 +24,7 @@ class Lens {
       : curField.set(fieldVal)
 
     // Actually return a new instance
-    return new Lens(this._fields.set(fieldName, newField))
+    return new Model(this._fields.set(fieldName, newField))
   }
 
   field (fieldName) {
@@ -38,4 +38,4 @@ class Lens {
   }
 }
 
-export default Lens
+export default Model

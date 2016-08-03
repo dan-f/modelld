@@ -2,9 +2,9 @@ import Immutable from 'immutable'
 import $rdf from 'rdflib'
 
 import Field from './field'
-import Lens from './lens'
+import Model from './model'
 
-export function createLens (graph, subject, schema) {
+export function createModel (graph, subject, schema) {
   const fields = Immutable.Map(
     Object.keys(schema).reduce((prevFields, fieldName) => {
       const matchingStmts = graph
@@ -16,7 +16,7 @@ export function createLens (graph, subject, schema) {
     }, {})
   )
 
-  return new Lens(fields)
+  return new Model(fields)
 }
 
-export function saveLens (lens) {}
+export function saveModel (model) {}
