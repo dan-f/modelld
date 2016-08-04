@@ -1,40 +1,43 @@
 import Field from './field'
 
 /**
- * TODO: Description of what a model is.
+ * A Model represents a subgraph of an RDF graph.
  *
- * TODO: example use of a model
+ * Rather than instantiate a Model directly, call createModel().
  */
 class Model {
   /**
-   * TODO: Description of how to instantiate a model.
+   * Rather than instantiate a Model directly, call createModel().
    *
-   * TODO: example of instantiating a model
+   * @constructor
    *
-   * TODO: JSDoc arguments
+   * @param {Immutable.Map<String, Field>} fields - a map of field names to
+   * field objects.  Field names are aliases for a particular RDF predicate.
    */
   constructor (fields) {
     this._fields = fields
   }
 
+  /**
+   * Change the value of a field.  Because Models are immutable, this method
+   * will return a new Model with the corresponding new field value.
+   *
+   * @param {String} fieldName - the name of the field to update.
+   * @param {String|Array<String>} fieldVal - the new value of the field.
+   * Currently limited to strings or an array of strings.
+   */
   set (fieldName, fieldVal) {
-    const curField = this._fields.get(fieldName)
-    const newField = Array.isArray(fieldVal)
-      ? fieldVal.map(val => curField.set(val))
-      : curField.set(fieldVal)
-
-    // Actually return a new instance
-    return new Model(this._fields.set(fieldName, newField))
+    const field = this._fields.get(fieldName)
+    return new Model(this._fields.set(fieldName, field.set(fieldVal)))
   }
 
-  field (fieldName) {
-    return this._fields.get(fieldName)
-  }
-
+  /**
+   * Get the value of a field.
+   *
+   * @param {String} fieldName - the name of the field to look up.
+   */
   get (fieldName) {
-    return Array.isArray(this.field(fieldName))
-      ? this.field(fieldName).map(field => field.val)
-      : this.field(fieldName).val
+    return this._fields.get(fieldName).val
   }
 }
 
