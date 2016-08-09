@@ -6,3 +6,7 @@ export function callOrMap(fn, maybeArray) {
     ? maybeArray.map(fn)
     : fn(maybeArray)
 }
+
+export function isDefined(obj) {
+  return typeof obj !== 'undefined'
+}

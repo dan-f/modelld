@@ -26,10 +26,10 @@ class Model {
    * @param {String|Array<String>} fieldVal - the new value of the field.
    * Currently limited to strings or an array of strings.
    */
-  set (fieldName, fieldVal) {
-    const field = this._fields.get(fieldName)
-    return new Model(this._fields.set(fieldName, field.set(fieldVal)))
-  }
+  // set (fieldName, fieldVal) {
+  //   const field = this._fields.get(fieldName)
+  //   return new Model(this._fields.set(fieldName, field.set(fieldVal)))
+  // }
 
   /**
    * Get the value of a field.
@@ -37,7 +37,7 @@ class Model {
    * @param {String} fieldName - the name of the field to look up.
    */
   get (fieldName) {
-    return this._fields.get(fieldName).val
+    return this._fields.get(fieldName)
   }
 }
 

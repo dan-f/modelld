@@ -1,16 +1,18 @@
 import Immutable from 'immutable'
-import $rdf from 'rdflib'
 
 import Field from './field'
 import Model from './model'
 
-export function createModel (graph, subject, schema) {
+export function createModel (rdf, graph, subject, fieldCreators) {
   const fields = Immutable.Map(
-    Object.keys(schema).reduce((prevFields, fieldName) => {
-      const matchingStmts = graph
-        .statementsMatching($rdf.sym(subject), schema[fieldName])
-      const field = new Field(matchingStmts)
-      return Object.assign(prevFields, {[fieldName]: field})
+    Object.keys(fieldCreators).reduce((prevFields, fieldName) => {
+      const fieldCreator = fieldCreators[fieldName]
+      const matchingQuads = graph
+        .statementsMatching(rdf.sym(subject), fieldCreator.predicate)
+      console.log(fieldCreator.predicate)
+      // console.log(matchingQuads)
+      const matchingFields = matchingQuads.map(quad => fieldCreator.fromQuad(quad))
+      return Object.assign(prevFields, {[fieldName]: matchingFields})
     }, {})
   )
 
