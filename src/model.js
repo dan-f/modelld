@@ -1,16 +1,30 @@
-import Field from './field'
+import Immutable from 'immutable'
 
-// TODO: can we make the setters/removers a bit more ergonomic? can we just pass
-// the field to remove/replace rather than having to know the field key?
+import { Field } from './field'
+
+export function modelFactory (rdf, subject, fieldCreators) {
+  return (graph) => {
+    const fields = Immutable.Map(
+      Object.keys(fieldCreators).reduce((prevFields, fieldName) => {
+        const fieldCreator = fieldCreators[fieldName]
+        const matchingQuads = graph
+          .statementsMatching(rdf.sym(subject), fieldCreator.predicate)
+        const matchingFields = matchingQuads.map(quad => fieldCreator.fromQuad(quad))
+        return Object.assign(prevFields, {[fieldName]: matchingFields})
+      }, {})
+    )
+    return new Model(fields)
+  }
+}
 
 /**
  * A Model represents a subgraph of an RDF graph.
  *
- * Rather than instantiate a Model directly, call createModel().
+ * Rather than instantiate a Model directly, call modelFactory().
  */
-class Model {
+export class Model {
   /**
-   * Rather than instantiate a Model directly, call createModel().
+   * Rather than instantiate a Model directly, call modelFactory().
    *
    * @constructor
    *
@@ -76,5 +90,3 @@ class Model {
     )
   }
 }
-
-export default Model

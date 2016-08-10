@@ -5,7 +5,7 @@ import rdf from 'rdflib'
 import solidNs from 'solid-namespace'
 
 import { fieldFactory } from '../src/field'
-import { createModel } from '../src/index'
+import { modelFactory } from '../src/index'
 
 const vocab = solidNs(rdf)
 
@@ -57,10 +57,11 @@ describe('Model', () => {
     })
     name = field(vocab.foaf('name'))
     phone = field(vocab.foaf('phone'))
-    model = createModel(rdf, graph, webId, {
+    const profileModel = modelFactory(rdf, webId, {
       name,
       phone
     })
+    model = profileModel(graph)
   })
 
   it('can get fields by name', () => {

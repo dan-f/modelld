@@ -40,7 +40,7 @@ export function fieldFactory (sourceConfig) {
  * A Field represents, for an implicit subject, a predicate, a value, and
  * whether or not the field is public (listed).
  */
-export default class Field {
+export class Field {
   /**
    * Fields are constructed with a predicate, value, and listed status which can
    * either be specified via an RDF quad, or ad hoc values.
