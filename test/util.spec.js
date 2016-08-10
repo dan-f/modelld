@@ -1,19 +1,7 @@
 /* global describe, it */
 import expect from 'expect'
 
-import { callOrMap, isDefined } from '../src/util'
-
-describe('callOrMap', () => {
-  const toUpperCase = str => str.toUpperCase()
-
-  it('applies a function to a singleton', () => {
-    expect(callOrMap(toUpperCase, 'foo')).toEqual('FOO')
-  })
-
-  it('maps a function over an array', () => {
-    expect(callOrMap(toUpperCase, ['foo', 'bar'])).toEqual(['FOO', 'BAR'])
-  })
-})
+import { isDefined } from '../src/util'
 
 describe('isDefined', () => {
   it('knows when a value is defined', () => {

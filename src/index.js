@@ -9,8 +9,6 @@ export function createModel (rdf, graph, subject, fieldCreators) {
       const fieldCreator = fieldCreators[fieldName]
       const matchingQuads = graph
         .statementsMatching(rdf.sym(subject), fieldCreator.predicate)
-      console.log(fieldCreator.predicate)
-      // console.log(matchingQuads)
       const matchingFields = matchingQuads.map(quad => fieldCreator.fromQuad(quad))
       return Object.assign(prevFields, {[fieldName]: matchingFields})
     }, {})

@@ -1,12 +1,9 @@
 /**
- * Apply function `fn` to object or array `maybeArray`.
+ * Determines whether a value is not `undefined`.
+ *
+ * @param {*} value - the value to test.
+ * @returns {Boolean} - true if the value is defined, false otherwise.
  */
-export function callOrMap(fn, maybeArray) {
-  return (Array.isArray(maybeArray))
-    ? maybeArray.map(fn)
-    : fn(maybeArray)
-}
-
-export function isDefined(obj) {
-  return typeof obj !== 'undefined'
+export function isDefined(value) {
+  return typeof value !== 'undefined'
 }

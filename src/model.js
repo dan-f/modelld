@@ -1,5 +1,8 @@
 import Field from './field'
 
+// TODO: can we make the setters/removers a bit more ergonomic? can we just pass
+// the field to remove/replace rather than having to know the field key?
+
 /**
  * A Model represents a subgraph of an RDF graph.
  *
@@ -11,33 +14,66 @@ class Model {
    *
    * @constructor
    *
-   * @param {Immutable.Map<String, Field>} fields - a map of field names to
-   * field objects.  Field names are aliases for a particular RDF predicate.
+   * @param {Immutable.Map<String, Field>} fields - a map of field keys to field
+   * objects.  Field keys are aliases for a particular RDF predicate.
    */
   constructor (fields) {
     this._fields = fields
   }
 
   /**
-   * Change the value of a field.  Because Models are immutable, this method
-   * will return a new Model with the corresponding new field value.
+   * Get all the fields for a given key.
    *
-   * @param {String} fieldName - the name of the field to update.
-   * @param {String|Array<String>} fieldVal - the new value of the field.
-   * Currently limited to strings or an array of strings.
+   * @param {String} key - the key of the fields to look up.
+   * @returns {Field[]} An array of fields for the given key.
    */
-  // set (fieldName, fieldVal) {
-  //   const field = this._fields.get(fieldName)
-  //   return new Model(this._fields.set(fieldName, field.set(fieldVal)))
-  // }
+  get (key) {
+    return this._fields.get(key) || []
+  }
 
   /**
-   * Get the value of a field.
+   * Add a field to the model.
    *
-   * @param {String} fieldName - the name of the field to look up.
+   * @param {String} key - the key of the fields to add to.
+   * @param {Field} field - the field to add.
+   * @returns {Model} - the updated model.
    */
-  get (fieldName) {
-    return this._fields.get(fieldName)
+  add (key, field) {
+    return new Model(
+      this._fields.set(key, [...this._fields.get(key), field])
+    )
+  }
+
+  /**
+   * Remove a field from the model.
+   *
+   * @param {String} key - the key of the fields to remove from.
+   * @param {Field} field - the field to remove.
+   * @returns {Model} - the updated model.
+   */
+  remove (key, field) {
+    return new Model(
+      this._fields.set(
+        key,
+        this._fields.get(key).filter(f => field._id !== f._id)
+      )
+    )
+  }
+
+  /**
+   * Replace a field on the model.
+   *
+   * @param {String} key - the key of the fields to replace within.
+   * @param {Field} field - the field to replace.
+   * @returns {Model} - the updated model.
+   */
+  set (key, oldField, newField) {
+    return new Model(
+      this._fields.set(
+        key,
+        this._fields.get(key).map(f => f._id === oldField._id ? newField : f)
+      )
+    )
   }
 }
 

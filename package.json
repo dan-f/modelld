@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "immutable": "^3.8.1",
+    "node-uuid": "^1.4.7",
     "rdflib": "^0.9.0"
   }
 }

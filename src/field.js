@@ -1,3 +1,4 @@
+import uuid from 'node-uuid'
 import { isDefined } from './util'
 
 /**
@@ -93,6 +94,7 @@ export default class Field {
         : false
     }
     this._sourceConfig = sourceConfig
+    this._id = uuid.v4()
   }
 
   /**
