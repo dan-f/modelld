@@ -4,7 +4,7 @@ import uuid from 'node-uuid'
 import { isDefined } from './util'
 
 /**
- * Generates a factory (a factory factory) for creating fields.
+ * Generates a factory for creating fields.
  *
  * @param {Object} sourceConfig - A configuration object containing the default
  * listed and unlisted source graphs, and a mapping of all source graphs to
@@ -149,6 +149,7 @@ export class Field {
    * @param {Object} options - An options object specifying named parameters.
    * @param {String} options.value - The new value for this field.
    * @param {Boolean} options.listed - The new listing value for this field.
+   * @returns {Field} A new field object with the specified state.
    */
   set ({ value = null, listed = null }) {
     return new Field({
@@ -166,7 +167,7 @@ export class Field {
    * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js
    * @param {Object} subject - The implicit subject for this field.
    * Particularly, an RDF subject, currently assumed to be an rdflib.js subject.
-   * TODO - add subject to field constructor
+   * @returns {Object} An RDF quad representing the current state of this field.
    */
   _toQuad (rdf, subject) {
     const { defaultSources, sourceIndex } = this._sourceConfig

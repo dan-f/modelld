@@ -3,10 +3,19 @@ import Immutable from 'immutable'
 import { Field } from './field'
 import { isDefined } from './util'
 
+/**
+ * Generates a factory for creating models.
+ *
+ * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js.
+ * @param {Object} fieldCreators - A mapping from field keys to field factory
+ * functions.
+ * @returns {Function} - A factory function for creating actual models.  The
+ * factory takes two arguments - an RDF graph object to parse and the subject of
+ * the model as a string.
+ */
 export function modelFactory (rdf, fieldCreators) {
-  // TODO: determine if `subject` should be an RDF data type... i want it to
-  // just be a string
-  return (graph, subject) => {
+  return (graph, subjectStr) => {
+    const subject = rdf.namedNode(subject)
     const fields = Immutable.Map(
       Object.keys(fieldCreators).reduce((prevFields, fieldName) => {
         const fieldCreator = fieldCreators[fieldName]
@@ -27,13 +36,16 @@ export function modelFactory (rdf, fieldCreators) {
  */
 export class Model {
   /**
-   * Rather than instantiate a Model directly, call modelFactory().
+   * Rather than instantiate a Model directly, use the model factory.
    *
    * @constructor
    *
-   * TODO: document subject and graveyard param
-   * @param {Immutable.Map<String, Field>} fields - a map of field keys to field
+   * @param {Object} subject - The subject of this model as an RDF subject
+   * object.
+   * @param {Immutable.Map.<String, Field>} fields - a map of field keys to field
    * objects.  Field keys are aliases for a particular RDF predicate.
+   * @param {Field[]=} graveyard - An optional array of fields which have been
+   * removed from the model.
    */
   constructor (subject, fields, graveyard = []) {
     this._subject = subject
@@ -87,8 +99,11 @@ export class Model {
   /**
    * Replace a field on the model.
    *
-   * @param {String} key - the key of the fields to replace within.
-   * @param TODO - update to `newFieldArgs`
+   * @param {String} key - the field key used to find the key to remove.
+   * @param {Field} oldField - the field which should be removed.
+   * @param {Object} newFieldArgs - arguments to create the new field.
+   * @param {String} newFieldArgs.value - the new field's value.
+   * @param {Boolean} newFieldArgs.listed - the new field's listed value.
    * @returns {Model} - the updated model.
    */
   set (key, oldField, newFieldArgs) {
@@ -103,7 +118,25 @@ export class Model {
     )
   }
 
-  // TODO: document
+  /**
+   * Compare the current state of the model with its original state and
+   * determine, for each RDF graph in this model, which fields should be removed
+   * and which should be inserted.
+   *
+   * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js.
+   * @returns {Object} A mapping from graph URIs to the fields which should be
+   * inserted and deleted within those URIs.  For example:
+   *   {
+   *     'http://example.com/one-resource': {
+   *       toIns: [ Field1 ],
+   *       toDel: [ ],
+   *     },
+   *     'http://example.com/another-resource': {
+   *       toIns: [ ],
+   *       toDel: [ Field2 ],
+   *     },
+   *   }
+   */
   _diff (rdf) {
     // TODO: refactor
     const diffMap = this._fields
@@ -117,7 +150,8 @@ export class Model {
         const originalSourceURI = isDefined(field._quad)
           ? field._quad.graph.value
           : null
-        if (!isDefined(originalQuad) || !newQuad.equals(originalQuad)) {
+        const fieldHasChanged = !isDefined(originalQuad) || !newQuad.equals(originalQuad)
+        if (fieldHasChanged) {
           if (originalSourceURI) {
             if (!isDefined(map[originalSourceURI])) {
               map[originalSourceURI] = {toDel: [], toIns: []}
