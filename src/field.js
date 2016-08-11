@@ -1,4 +1,6 @@
+import clone from 'lodash/clone'
 import uuid from 'node-uuid'
+
 import { isDefined } from './util'
 
 /**
@@ -164,6 +166,7 @@ export class Field {
    * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js
    * @param {Object} subject - The implicit subject for this field.
    * Particularly, an RDF subject, currently assumed to be an rdflib.js subject.
+   * TODO - add subject to field constructor
    */
   _toQuad (rdf, subject) {
     const { defaultSources, sourceIndex } = this._sourceConfig
@@ -174,11 +177,18 @@ export class Field {
     } else {
       sourceURI = this.listed ? defaultSources.listed : defaultSources.unlisted
     }
-    return rdf.st(
+    let object
+    if (isDefined(this._quad)) {
+      object = clone(this._quad.object)
+      object.value = this._value
+    } else {
+      object = rdf.Literal.fromValue(this._value)
+    }
+    return rdf.quad(
       subject,
       isDefined(this._quad) ? this._quad.predicate : this._predicate,
-      rdf.sym(this._value),
-      rdf.sym(sourceURI)
+      object,
+      rdf.namedNode(sourceURI)
     )
   }
 }

@@ -10,6 +10,8 @@ import { modelFactory } from '../src/index'
 const vocab = solidNs(rdf)
 
 describe('Model', () => {
+  let sourceConfig
+  let subject
   let name
   let phone
   let model
@@ -38,11 +40,11 @@ describe('Model', () => {
           <http://xmlns.com/foaf/0.1/phone> <tel:123-456-7890> ;
           <http://xmlns.com/foaf/0.1/phone> <tel:098-765-4321> .
     `
-    const subject = rdf.sym(webId)
+    subject = rdf.namedNode(webId)
     const graph = rdf.graph()
     rdf.parse(profile, graph, profileURI, 'text/turtle')
 
-    const field = fieldFactory({
+    sourceConfig = {
       defaultSources: {
         listed: profileURI,
         unlisted: 'http://mr-cool.example.com/unlisted'
@@ -54,14 +56,15 @@ describe('Model', () => {
        'http://mr-cool.example.com/unlisted': false,
        'http://mr-cool.example.com/another-unlisted': false
       }
-    })
+    }
+    const field = fieldFactory(sourceConfig)
     name = field(vocab.foaf('name'))
     phone = field(vocab.foaf('phone'))
-    const profileModel = modelFactory(rdf, webId, {
+    const profileModel = modelFactory(rdf, {
       name,
       phone
     })
-    model = profileModel(graph)
+    model = profileModel(graph, subject)
   })
 
   it('can get fields by name', () => {
@@ -98,6 +101,47 @@ describe('Model', () => {
     const secondPhone = model.get('phone')[1]
     const newPhone = phone('tel:000-000-0000')
     const updatedModel = model.set('phone', firstPhone, newPhone)
-    expect(updatedModel.get('phone')).toEqual([newPhone, secondPhone])
+    expect(updatedModel.get('phone').length).toBe(2)
+    expect(updatedModel.get('phone')[0]._quad).toEqual(firstPhone._quad)
+    expect(updatedModel.get('phone')[0].value).toEqual(newPhone.value)
+    expect(updatedModel.get('phone')[1]).toEqual(secondPhone)
+  })
+
+  describe('diffing', () => {
+    it('shows no changes for an unchanged model', () => {
+      expect(model._diff(rdf)).toEqual({})
+    })
+
+    describe('with added fields', () => {
+      it('shows that a listed field should be inserted into the listed graph')
+
+      it('shows that an unlisted field should be inserted into the unlisted graph', () => {
+        const unlistedURI = sourceConfig.defaultSources.unlisted
+        const newPhone = phone('tel:000-000-0000')
+        const updatedModel = model.add('phone', newPhone)
+        const expectedDiff = {}
+        expectedDiff[unlistedURI] = {}
+        expectedDiff[unlistedURI].toDel = []
+        expectedDiff[unlistedURI].toIns = [newPhone._toQuad(rdf, subject)]
+        expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
+      })
+    })
+
+    describe('with removed fields', () => {
+      it('shows that a listed field should be removed from the listed graph')
+
+      it('shows that a field should be deleted when an old field is removed', () => {
+        const listedURI = sourceConfig.defaultSources.listed
+        const removedPhone = model.get('phone')[1]
+        const updatedModel = model.remove('phone', removedPhone)
+        const expectedDiff = {}
+        expectedDiff[listedURI] = {}
+        expectedDiff[listedURI].toDel = [removedPhone._toQuad(rdf, subject)]
+        expectedDiff[listedURI].toIns = []
+        expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
+      })
+    })
+
+    it('shows that a field should be inserted and deleted when a field is modified')
   })
 })

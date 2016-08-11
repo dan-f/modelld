@@ -30,10 +30,10 @@ describe('field', () => {
   })
 
   it('can track the original RDF quad', () => {
-    const originalQuad = rdf.st(
-      rdf.sym('me'),
+    const originalQuad = rdf.quad(
+      rdf.sym('#me'),
       vocab.foaf('name'),
-      rdf.sym('dan')
+      rdf.Literal.fromValue('dan')
     )
     const originalName = name.fromQuad(originalQuad)
     expect(originalName.value).toEqual('dan')
@@ -46,22 +46,22 @@ describe('field', () => {
   })
 
   it('can be listed or unlisted when created from an RDF quad', () => {
-    const listedQuad = rdf.st(
-      rdf.sym('me'),
+    const listedQuad = rdf.quad(
+      rdf.sym('#me'),
       vocab.foaf('name'),
-      rdf.sym('dan'),
+      rdf.Literal.fromValue('dan'),
       rdf.sym('https://example.com/public-resource')
     )
-    const unlistedQuad = rdf.st(
+    const unlistedQuad = rdf.quad(
       rdf.sym('me'),
       vocab.foaf('name'),
       rdf.sym('dan'),
       rdf.sym('https://example.com/private-resource')
     )
-    const unspecifiedQuad = rdf.st(
-      rdf.sym('me'),
+    const unspecifiedQuad = rdf.quad(
+      rdf.sym('#me'),
       vocab.foaf('name'),
-      rdf.sym('dan')
+      rdf.Literal.fromValue('dan')
     )
     expect(name.fromQuad(listedQuad).listed).toBe(true)
     expect(name.fromQuad(unlistedQuad).listed).toBe(false)
@@ -100,29 +100,29 @@ describe('field', () => {
 
   describe('RDF statement generation', () => {
     it('returns the original quad for a quad-constructed field', () => {
-      const quad = rdf.st(
-        rdf.sym('me'),
+      const quad = rdf.quad(
+        rdf.sym('#me'),
         vocab.foaf('name'),
-        rdf.sym('dan'),
+        rdf.Literal.fromValue('dan'),
         rdf.sym(defaultSources.listed)
       )
       expect(name.fromQuad(quad)._toQuad(rdf, quad.subject)).toEqual(quad)
     })
 
     it('returns appropriate subject, predicate, value, and graph for value-constructed fields', () => {
-      expect(name('dan', {listed: true})._toQuad(rdf, rdf.sym('me'))).toEqual(
-        rdf.st(
-          rdf.sym('me'),
+      expect(name('dan', {listed: true})._toQuad(rdf, rdf.sym('#me'))).toEqual(
+        rdf.quad(
+          rdf.sym('#me'),
           vocab.foaf('name'),
-          rdf.sym('dan'),
+          rdf.Literal.fromValue('dan'),
           rdf.sym(defaultSources.listed)
         )
       )
-      expect(name('dan', {listed: false})._toQuad(rdf, rdf.sym('me'))).toEqual(
-        rdf.st(
-          rdf.sym('me'),
+      expect(name('dan', {listed: false})._toQuad(rdf, rdf.sym('#me'))).toEqual(
+        rdf.quad(
+          rdf.sym('#me'),
           vocab.foaf('name'),
-          rdf.sym('dan'),
+          rdf.Literal.fromValue('dan'),
           rdf.sym(defaultSources.unlisted)
         )
       )
@@ -134,10 +134,10 @@ describe('field', () => {
       // originally came from; it should not end up on the default unlisted
       // resource.
       const originalResource = rdf.sym('https://example.com/another-private-resource')
-      const quad = rdf.st(
-        rdf.sym('me'),
+      const quad = rdf.quad(
+        rdf.sym('#me'),
         vocab.foaf('name'),
-        rdf.sym('dan'),
+        rdf.Literal.fromValue('dan'),
         originalResource
       )
       const firstName = name.fromQuad(quad)
