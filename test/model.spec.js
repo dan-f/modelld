@@ -112,25 +112,29 @@ describe('Model', () => {
       expect(model._diff(rdf)).toEqual({})
     })
 
-    describe('with added fields', () => {
-      it('shows that a listed field should be inserted into the listed graph')
-
-      it('shows that an unlisted field should be inserted into the unlisted graph', () => {
-        const unlistedURI = sourceConfig.defaultSources.unlisted
-        const newPhone = phone('tel:000-000-0000')
-        const updatedModel = model.add('phone', newPhone)
-        const expectedDiff = {}
-        expectedDiff[unlistedURI] = {}
-        expectedDiff[unlistedURI].toDel = []
-        expectedDiff[unlistedURI].toIns = [newPhone._toQuad(rdf, subject)]
-        expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
+    describe('after adding fields', () => {
+      const testData = [
+        {value: 'tel:000-000-0000', listed: true},
+        {value: 'tel:111-111-1111', listed: false}
+      ]
+      testData.forEach(fieldData => {
+        it(`shows that a ${fieldData.listed ? 'listed' : 'unlisted'} field should be inserted into the graph`, () => {
+          const uri = fieldData.listed
+            ? sourceConfig.defaultSources.listed
+            : sourceConfig.defaultSources.unlisted
+          const newPhone = phone(fieldData.value, {listed: fieldData.listed})
+          const updatedModel = model.add('phone', newPhone)
+          const expectedDiff = {}
+          expectedDiff[uri] = {}
+          expectedDiff[uri].toDel = []
+          expectedDiff[uri].toIns = [newPhone._toQuad(rdf, subject)]
+          expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
+        })
       })
     })
 
-    describe('with removed fields', () => {
-      it('shows that a listed field should be removed from the listed graph')
-
-      it('shows that a field should be deleted when an old field is removed', () => {
+    describe('after removing fields', () => {
+      it('shows that a field should be removed from the graph', () => {
         const listedURI = sourceConfig.defaultSources.listed
         const removedPhone = model.get('phone')[1]
         const updatedModel = model.remove('phone', removedPhone)
@@ -142,6 +146,31 @@ describe('Model', () => {
       })
     })
 
-    it('shows that a field should be inserted and deleted when a field is modified')
+    describe('after updating fields', () => {
+      const testData = [
+        {value: 'tel:000-000-0000', listed: true},
+        {value: 'tel:111-111-1111', listed: false}
+      ]
+      testData.forEach(fieldData => {
+        it(`shows that a ${fieldData.listed ? 'listed' : 'unlisted'} field should be added to and removed from the graph`, () => {
+          const newPhoneURI = fieldData.listed
+            ? sourceConfig.defaultSources.listed
+            : sourceConfig.defaultSources.unlisted
+          const oldPhone = model.get('phone')[1]
+          const oldPhoneURI = oldPhone._quad.graph.value
+          const updatedModel = model.set('phone', oldPhone, fieldData)
+          const expectedDiff = {}
+          expectedDiff[oldPhoneURI] = {}
+          expectedDiff[newPhoneURI] = {}
+          expectedDiff[oldPhoneURI].toIns = []
+          expectedDiff[newPhoneURI].toDel = []
+          expectedDiff[oldPhoneURI].toDel = [oldPhone._toQuad(rdf, subject)]
+          expectedDiff[newPhoneURI].toIns = [
+            updatedModel.get('phone')[1]._toQuad(rdf, subject)
+          ]
+          expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
+        })
+      })
+    })
   })
 })
