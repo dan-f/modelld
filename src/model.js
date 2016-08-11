@@ -138,7 +138,6 @@ export class Model {
    *   }
    */
   _diff (rdf) {
-    // TODO: refactor
     const diffMap = this._fields
       .toArray()
       .reduce((reduction, cur) => [...reduction, ...cur])
