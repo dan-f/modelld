@@ -127,7 +127,7 @@ describe('Model', () => {
           const expectedDiff = {}
           expectedDiff[uri] = {}
           expectedDiff[uri].toDel = []
-          expectedDiff[uri].toIns = [newPhone._toQuad(rdf, subject)]
+          expectedDiff[uri].toIns = [newPhone._toQuad(rdf, subject).toString()]
           expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
         })
       })
@@ -140,7 +140,7 @@ describe('Model', () => {
         const updatedModel = model.remove('phone', removedPhone)
         const expectedDiff = {}
         expectedDiff[listedURI] = {}
-        expectedDiff[listedURI].toDel = [removedPhone._toQuad(rdf, subject)]
+        expectedDiff[listedURI].toDel = [removedPhone._toQuad(rdf, subject).toString()]
         expectedDiff[listedURI].toIns = []
         expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
       })
@@ -164,9 +164,9 @@ describe('Model', () => {
           expectedDiff[newPhoneURI] = {}
           expectedDiff[oldPhoneURI].toIns = []
           expectedDiff[newPhoneURI].toDel = []
-          expectedDiff[oldPhoneURI].toDel = [oldPhone._toQuad(rdf, subject)]
+          expectedDiff[oldPhoneURI].toDel = [oldPhone._toQuad(rdf, subject).toString()]
           expectedDiff[newPhoneURI].toIns = [
-            updatedModel.get('phone')[1]._toQuad(rdf, subject)
+            updatedModel.get('phone')[1]._toQuad(rdf, subject).toString()
           ]
           expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
         })

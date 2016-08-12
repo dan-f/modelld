@@ -124,8 +124,8 @@ export class Model {
    * and which should be inserted.
    *
    * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js.
-   * @returns {Object} A mapping from graph URIs to the fields which should be
-   * inserted and deleted within those URIs.  For example:
+   * @returns {Object} A mapping from graph URIs to the RDF quads (as strings)
+   * which should be inserted and deleted within those URIs.  For example:
    *   {
    *     'http://example.com/one-resource': {
    *       toIns: [ Field1 ],
@@ -155,12 +155,12 @@ export class Model {
             if (!isDefined(map[originalSourceURI])) {
               map[originalSourceURI] = {toDel: [], toIns: []}
             }
-            map[originalSourceURI].toDel.push(originalQuad)
+            map[originalSourceURI].toDel.push(originalQuad.toString())
           }
           if (!isDefined(map[newSourceURI])) {
             map[newSourceURI] = {toDel: [], toIns: []}
           }
-          map[newSourceURI].toIns.push(newQuad)
+          map[newSourceURI].toIns.push(newQuad.toString())
         }
         return map
       }, {})
@@ -172,7 +172,7 @@ export class Model {
         if (!isDefined(diffMap[uri])) {
           diffMap[uri] = {toDel: [], toIns: []}
         }
-        diffMap[uri].toDel.push(quad)
+        diffMap[uri].toDel.push(quad.toString())
       }
     }, diffMap)
 
