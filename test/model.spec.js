@@ -5,7 +5,7 @@ import rdf from 'rdflib'
 import solidNs from 'solid-namespace'
 
 import * as Field from '../src/field'
-import { modelFactory } from '../src/index'
+import * as Model from '../src/model'
 
 const vocab = solidNs(rdf)
 
@@ -60,7 +60,7 @@ describe('Model', () => {
     const field = Field.fieldFactory(sourceConfig)
     name = field(vocab.foaf('name'))
     phone = field(vocab.foaf('phone'))
-    const profileModel = modelFactory(rdf, {
+    const profileModel = Model.modelFactory(rdf, {
       name,
       phone
     })
@@ -68,9 +68,9 @@ describe('Model', () => {
   })
 
   it('can get fields by name', () => {
-    const nameFields = model.get('name')
+    const nameFields = Model.get(model, 'name')
     const nameField = nameFields[0]
-    const phoneFields = model.get('phone')
+    const phoneFields = Model.get(model, 'phone')
     expect(nameFields.length).toEqual(1)
     expect(nameField.value).toEqual('Mr. Cool')
     expect(phoneFields.length).toEqual(2)
@@ -79,37 +79,37 @@ describe('Model', () => {
   })
 
   it('returns an empty array for undefined field names', () => {
-    expect(model.get('undefined-field')).toEqual([])
+    expect(Model.get(model, 'undefined-field')).toEqual([])
   })
 
   it('can add new fields', () => {
-    const nameFields = model.get('name')
-    const newModel = model.add('name', name('Ms. Cool'))
-    expect(newModel.get('name').map(field => field.value))
+    const nameFields = Model.get(model, 'name')
+    const newModel = Model.add(model, 'name', name('Ms. Cool'))
+    expect(Model.get(newModel, 'name').map(field => field.value))
       .toEqual(['Mr. Cool', 'Ms. Cool'])
   })
 
   it('can remove existing fields', () => {
-    const firstPhone = model.get('phone')[0]
-    const secondPhone = model.get('phone')[1]
-    const updatedModel = model.remove('phone', firstPhone)
-    expect(updatedModel.get('phone')).toEqual([secondPhone])
+    const firstPhone = Model.get(model, 'phone')[0]
+    const secondPhone = Model.get(model, 'phone')[1]
+    const updatedModel = Model.remove(model, 'phone', firstPhone)
+    expect(Model.get(updatedModel, 'phone')).toEqual([secondPhone])
   })
 
   it('can change the value of contained fields', () => {
-    const firstPhone = model.get('phone')[0]
-    const secondPhone = model.get('phone')[1]
+    const firstPhone = Model.get(model, 'phone')[0]
+    const secondPhone = Model.get(model, 'phone')[1]
     const newPhone = phone('tel:000-000-0000')
-    const updatedModel = model.set('phone', firstPhone, newPhone)
-    expect(updatedModel.get('phone').length).toBe(2)
-    expect(updatedModel.get('phone')[0]._quad).toEqual(firstPhone._quad)
-    expect(updatedModel.get('phone')[0].value).toEqual(newPhone.value)
-    expect(updatedModel.get('phone')[1]).toEqual(secondPhone)
+    const updatedModel = Model.set(model, 'phone', firstPhone, newPhone)
+    expect(Model.get(updatedModel, 'phone').length).toBe(2)
+    expect(Model.get(updatedModel, 'phone')[0]._quad).toEqual(firstPhone._quad)
+    expect(Model.get(updatedModel, 'phone')[0].value).toEqual(newPhone.value)
+    expect(Model.get(updatedModel, 'phone')[1]).toEqual(secondPhone)
   })
 
   describe('diffing', () => {
     it('shows no changes for an unchanged model', () => {
-      expect(model._diff(rdf)).toEqual({})
+      expect(Model.diff(rdf, model)).toEqual({})
     })
 
     describe('after adding fields', () => {
@@ -123,12 +123,14 @@ describe('Model', () => {
             ? sourceConfig.defaultSources.listed
             : sourceConfig.defaultSources.unlisted
           const newPhone = phone(fieldData.value, {listed: fieldData.listed})
-          const updatedModel = model.add('phone', newPhone)
+          const updatedModel = Model.add(model, 'phone', newPhone)
           const expectedDiff = {}
           expectedDiff[uri] = {}
           expectedDiff[uri].toDel = []
-          expectedDiff[uri].toIns = [Field.toQuad(rdf, subject, newPhone).toString()]
-          expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
+          expectedDiff[uri].toIns = [
+            Field.toQuad(rdf, subject, newPhone).toString()
+          ]
+          expect(Model.diff(rdf, updatedModel)).toEqual(expectedDiff)
         })
       })
     })
@@ -136,13 +138,15 @@ describe('Model', () => {
     describe('after removing fields', () => {
       it('shows that a field should be removed from the graph', () => {
         const listedURI = sourceConfig.defaultSources.listed
-        const removedPhone = model.get('phone')[1]
-        const updatedModel = model.remove('phone', removedPhone)
+        const removedPhone = Model.get(model, 'phone')[1]
+        const updatedModel = Model.remove(model, 'phone', removedPhone)
         const expectedDiff = {}
         expectedDiff[listedURI] = {}
-        expectedDiff[listedURI].toDel = [Field.toQuad(rdf, subject, removedPhone).toString()]
+        expectedDiff[listedURI].toDel = [
+          Field.toQuad(rdf, subject, removedPhone).toString()
+        ]
         expectedDiff[listedURI].toIns = []
-        expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
+        expect(Model.diff(rdf, updatedModel)).toEqual(expectedDiff)
       })
     })
 
@@ -156,19 +160,22 @@ describe('Model', () => {
           const newPhoneURI = fieldData.listed
             ? sourceConfig.defaultSources.listed
             : sourceConfig.defaultSources.unlisted
-          const oldPhone = model.get('phone')[1]
+          const oldPhone = Model.get(model, 'phone')[1]
           const oldPhoneURI = oldPhone._quad.graph.value
-          const updatedModel = model.set('phone', oldPhone, fieldData)
+          const updatedModel = Model.set(model, 'phone', oldPhone, fieldData)
           const expectedDiff = {}
           expectedDiff[oldPhoneURI] = {}
           expectedDiff[newPhoneURI] = {}
           expectedDiff[oldPhoneURI].toIns = []
           expectedDiff[newPhoneURI].toDel = []
-          expectedDiff[oldPhoneURI].toDel = [Field.toQuad(rdf, subject, oldPhone).toString()]
-          expectedDiff[newPhoneURI].toIns = [
-            Field.toQuad(rdf, subject, updatedModel.get('phone')[1]).toString()
+          expectedDiff[oldPhoneURI].toDel = [
+            Field.toQuad(rdf, subject, oldPhone).toString()
           ]
-          expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
+          expectedDiff[newPhoneURI].toIns = [
+            Field.toQuad(rdf, subject, Model.get(updatedModel, 'phone')[1])
+              .toString()
+          ]
+          expect(Model.diff(rdf, updatedModel)).toEqual(expectedDiff)
         })
       })
     })

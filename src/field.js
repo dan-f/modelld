@@ -79,7 +79,7 @@ export function fieldFactory (sourceConfig) {
  * string URIs and whose values are booleans indicating whether or not those
  * URIs are listed or unlisted.  true indicates listed, and false indicates
  * unlisted.
- * @returns {Object} the newly constructed field object.
+ * @returns {Object} the newly constructed field.
  */
 function createField ({ quad, predicate, value, listed, sourceConfig }) {
   const field = {}
@@ -112,7 +112,8 @@ function createField ({ quad, predicate, value, listed, sourceConfig }) {
   field._id = uuid.v4()
   return new Proxy(field, {
     set: () => {
-      throw new Error('Fields are immutable.  Use Field.set() to create new fields with different values.')
+      throw new Error('Fields are immutable.  Use Field.set() to create new'
+                      + ' fields with different values.')
     }
   })
 }

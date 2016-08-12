@@ -1,2 +1,2 @@
-export { fieldFactory } from './field'
-export { modelFactory } from './model'
+module.exports.Field = require('./field')
+module.exports.Model = require('./model')
