@@ -4,6 +4,22 @@ import uuid from 'node-uuid'
 import { isDefined } from './util'
 
 /**
+ * A Field represents, for an implicit subject, a predicate, a value, and
+ * whether or not the field is public (listed).
+ *
+ * @typedef {Object} Field
+ * @property {Object=} _quad - The RDF quad object which the field may have been
+ * constructed from.  A field either has a quad or a predicate.
+ * @property {Object=} _predicate- The RDF predicate which this field
+ * represents.  A field either has a quad or a predicate.
+ * @property {String} _id - A UUID.
+ * @property {String} value - The value of this field.  Currently only strings
+ * are supported.
+ * @property {Boolean} listed - Whether or not this field is listed (public) or
+ * unlisted (private).
+ */
+
+/**
  * Generates a factory for creating fields.
  *
  * @param {Object} sourceConfig - A configuration object containing the default
@@ -23,7 +39,7 @@ import { isDefined } from './util'
 export function fieldFactory (sourceConfig) {
   return (predicate) => {
     const fieldCreator = (value, options = {}) => {
-      return new Field({
+      return createField({
         predicate,
         value,
         listed: options.listed,
@@ -31,7 +47,7 @@ export function fieldFactory (sourceConfig) {
       })
     }
     fieldCreator.fromQuad = quad => {
-      return new Field({quad, sourceConfig})
+      return createField({quad, sourceConfig})
     }
     fieldCreator.predicate = predicate
     return fieldCreator
@@ -39,157 +55,125 @@ export function fieldFactory (sourceConfig) {
 }
 
 /**
- * A Field represents, for an implicit subject, a predicate, a value, and
- * whether or not the field is public (listed).
+ * Fields are constructed with a predicate, value, and listed status which can
+ * either be specified via an RDF quad, or ad hoc values.
+ *
+ * @param {Object} options - An options object specifying named parameters.
+ * @param {Object=} options.quad - The original RDF quad which this field
+ * represents.  This quad is the original value of the field.  Must either
+ * provide a quad or a predicate.
+ * @param {Object=} options.predicate - The RDF predicate which this field
+ * represents.  Must either provide a quad or a predicate.
+ * @param {String} options.value - Optionally specifies the current value of
+ * this field.  Should only be provided by the field class internally when
+ * updating a field.
+ * @param {Boolean} options.listed - Whether or not this field is listed
+ * (public) or unlisted (private).
+ * @param {Object} options.sourceConfig - A configuration object containing
+ * the default listed and unlisted source graphs, and a mapping of all source
+ * graphs to whether they're listed.
+ * @param {Object} options.sourceConfig.defaultSources - An object with two
+ * keys, 'listed', and 'unlisted', which each map to strings representing URIs
+ * for the default listed and unlisted graphs, respectively.
+ * @param {Object} options.sourceConfig.sourceIndex - An object whose keys are
+ * string URIs and whose values are booleans indicating whether or not those
+ * URIs are listed or unlisted.  true indicates listed, and false indicates
+ * unlisted.
+ * @returns {Object} the newly constructed field object.
  */
-export class Field {
-  /**
-   * Fields are constructed with a predicate, value, and listed status which can
-   * either be specified via an RDF quad, or ad hoc values.
-   *
-   * @constructor
-   *
-   * @param {Object} options - An options object specifying named parameters.
-   * @param {RDF quad} options.quad - The original RDF statement which this
-   * field represents.  This statement tracks the original value of the field.
-   * @param {String} options.value - Optionally specifies the current value of
-   * this field.  Should only be provided by the field class internally when
-   * updating a field.
-   * @param {Boolean} options.listed - Whether or not this field is listed
-   * (public) or unlisted (private).
-   * @param {Object} options.sourceConfig - A configuration object containing
-   * the default listed and unlisted source graphs, and a mapping of all source
-   * graphs to whether they're listed.
-   * @param {Object} options.sourceConfig.defaultSources - An object with two
-   * keys, 'listed', and 'unlisted', which each map to strings representing URIs
-   * for the default listed and unlisted graphs, respectively.
-   * @param {Object} options.sourceConfig.sourceIndex - An object whose keys are
-   * string URIs and whose values are booleans indicating whether or not those
-   * URIs are listed or unlisted.  true indicates listed, and false indicates
-   * unlisted.
-   * @returns {Field} the newly constructed field object.
-   */
-  constructor ({ quad, predicate, value, listed, sourceConfig }) {
-    if (isDefined(quad) && isDefined(predicate)) {
-      throw new Error('Must provide either quad or predicate, but not both.')
+function createField ({ quad, predicate, value, listed, sourceConfig }) {
+  const field = {}
+  if (isDefined(quad) && isDefined(predicate)) {
+    throw new Error('Must provide either quad or predicate, but not both.')
+  }
+  if (isDefined(quad)) {
+    const { sourceIndex } = sourceConfig
+    field._quad = quad
+    field.value = quad.object.value
+    field.listed = isDefined(quad.graph)
+      ? sourceIndex[quad.graph.value]
+      : false
+  }
+  if (isDefined(predicate)) {
+    field._predicate = predicate
+  }
+  if (isDefined(value)) {
+    field.value = value
+  }
+  if (isDefined(listed)) {
+    field.listed = listed
+  } else {
+    // If we haven't already set a listed value, default to true.
+    field.listed = isDefined(field.listed)
+      ? field.listed
+      : false
+  }
+  field._sourceConfig = sourceConfig
+  field._id = uuid.v4()
+  return new Proxy(field, {
+    set: () => {
+      throw new Error('Fields are immutable.  Use Field.set() to create new fields with different values.')
     }
-    if (isDefined(quad)) {
-      const { sourceIndex } = sourceConfig
-      this._quad = quad
-      this._value = quad.object.value
-      this._listed = isDefined(quad.graph)
-        ? sourceIndex[quad.graph.value]
-        : false
-    }
-    if (isDefined(predicate)) {
-      this._predicate = predicate
-    }
-    if (isDefined(value)) {
-      this._value = value
-    }
-    if (isDefined(listed)) {
-      this._listed = listed
-    } else {
-      // If we haven't already set a listed value, default to true.
-      this._listed = isDefined(this._listed)
-        ? this._listed
-        : false
-    }
-    this._sourceConfig = sourceConfig
-    this._id = uuid.v4()
-  }
+  })
+}
 
-  /**
-   * Gets the current value of the field.
-   *
-   * @returns {String} the current field value.
-   */
-  get value () {
-    return this._value
+/**
+ * Generates an RDF quad representing the current state of the field.
+ *
+ * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js
+ * @param {Object} subject - The implicit subject for this field.  Particularly,
+ * an RDF subject, currently assumed to be an rdflib.js subject.
+ * @param {Field} field - the field to convert to an RDF quad.
+ * @returns {Object} An RDF quad representing the current state of this field.
+ */
+export function toQuad (rdf, subject, field) {
+  const { defaultSources, sourceIndex } = field._sourceConfig
+  let sourceURI
+  if (isDefined(field._quad)
+      && field.listed === sourceIndex[field._quad.graph.value]) {
+    sourceURI = field._quad.graph.value
+  } else {
+    sourceURI = field.listed ? defaultSources.listed : defaultSources.unlisted
   }
+  let object
+  if (isDefined(field._quad)) {
+    object = clone(field._quad.object)
+    object.value = field.value
+  } else {
+    object = rdf.Literal.fromValue(field.value)
+  }
+  return rdf.quad(
+    subject,
+    isDefined(field._quad) ? field._quad.predicate : field._predicate,
+    object,
+    rdf.namedNode(sourceURI)
+  )
+}
 
-  /**
-   * Exists to document the proper way to set a fields value.
-   */
-  set value (newVal) {
-    throw new Error('Use .set() method to change a field\'s value')
-  }
+/**
+ * Creates a field with the opposite listed value as the provided field.
+ *
+ * @returns {Field} a new field with the opposite listed value as the
+ * provided field.
+ */
+export function toggleListed (field) {
+  return set(field, {listed: !field.listed})
+}
 
-  /**
-   * Gets the current listed (public/private) value.
-   *
-   * @returns {Boolean} whether the field is listed.
-   */
-  get listed () {
-    return this._listed
-  }
-
-  /**
-   * Exists to document the proper way to set a fields listed value.
-   */
-  set listed (newListedVal) {
-    throw new Error('Use .set() method to change a field\'s listed value')
-  }
-
-  /**
-   * Gets a field object with the opposite listed value as the current field.
-   *
-   * @returns {Field} a new field object with the opposite listed value as the
-   * current field.
-   */
-  toggleListed () {
-    return this.set({listed: !this._listed})
-  }
-
-  /**
-   * Changes the value and/or listing value of this field.  Because fields are
-   * immutable, this returns a new Field object with the corresponding new
-   * values.
-   *
-   * @param {Object} options - An options object specifying named parameters.
-   * @param {String} options.value - The new value for this field.
-   * @param {Boolean} options.listed - The new listing value for this field.
-   * @returns {Field} A new field object with the specified state.
-   */
-  set ({ value = null, listed = null }) {
-    return new Field({
-      quad: this._quad,
-      predicate: this._predicate,
-      value: value !== null ? value : this._value,
-      listed: listed !== null ? listed : this._listed,
-      sourceConfig: this._sourceConfig
-    })
-  }
-
-  /**
-   * Generates an RDF quad representing the current state of the field.
-   *
-   * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js
-   * @param {Object} subject - The implicit subject for this field.
-   * Particularly, an RDF subject, currently assumed to be an rdflib.js subject.
-   * @returns {Object} An RDF quad representing the current state of this field.
-   */
-  _toQuad (rdf, subject) {
-    const { defaultSources, sourceIndex } = this._sourceConfig
-    let sourceURI
-    if (isDefined(this._quad)
-        && this.listed === sourceIndex[this._quad.graph.value]) {
-      sourceURI = this._quad.graph.value
-    } else {
-      sourceURI = this.listed ? defaultSources.listed : defaultSources.unlisted
-    }
-    let object
-    if (isDefined(this._quad)) {
-      object = clone(this._quad.object)
-      object.value = this._value
-    } else {
-      object = rdf.Literal.fromValue(this._value)
-    }
-    return rdf.quad(
-      subject,
-      isDefined(this._quad) ? this._quad.predicate : this._predicate,
-      object,
-      rdf.namedNode(sourceURI)
-    )
-  }
+/**
+ * Returns a field with the specified state.
+ *
+ * @param {Object} options - An options object specifying named parameters.
+ * @param {String} options.value - The new field value.
+ * @param {Boolean} options.listed - The new listed value.
+ * @returns {Field} A field with the specified state.
+ */
+export function set (field, { value = null, listed = null }) {
+  return createField({
+    quad: field._quad,
+    predicate: field._predicate,
+    value: value !== null ? value : field.value,
+    listed: listed !== null ? listed : field.listed,
+    sourceConfig: field._sourceConfig
+  })
 }

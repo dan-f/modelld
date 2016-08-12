@@ -1,6 +1,6 @@
 import Immutable from 'immutable'
 
-import { Field } from './field'
+import * as Field from './field'
 import { isDefined } from './util'
 
 /**
@@ -112,7 +112,7 @@ export class Model {
       this._fields.set(
         key,
         this._fields.get(key).map(f => {
-          return f._id === oldField._id ? f.set(newFieldArgs) : f
+          return f._id === oldField._id ? Field.set(f, newFieldArgs) : f
         })
       )
     )
@@ -143,7 +143,7 @@ export class Model {
       .reduce((reduction, cur) => [...reduction, ...cur])
       .reduce((previousMap, field) => {
         const map = Object.assign({}, previousMap)
-        const newQuad = field._toQuad(rdf, this._subject)
+        const newQuad = Field.toQuad(rdf, this._subject, field)
         const newSourceURI = newQuad.graph.value
         const originalQuad = field._quad
         const originalSourceURI = isDefined(field._quad)

@@ -3,7 +3,7 @@ import expect from 'expect'
 import rdf from 'rdflib'
 import solidNs from 'solid-namespace'
 
-import { fieldFactory } from '../src/field'
+import * as Field from '../src/field'
 
 const vocab = solidNs(rdf)
 
@@ -22,7 +22,7 @@ describe('field', () => {
     defaultSources,
     sourceIndex
   }
-  const factory = fieldFactory(sourceConfig)
+  const factory = Field.fieldFactory(sourceConfig)
   const name = factory(vocab.foaf('name'))
 
   it('has a value', () => {
@@ -71,29 +71,29 @@ describe('field', () => {
   it('can update its value', () => {
     const firstName = name('dan')
     expect(firstName.value).toEqual('dan')
-    expect(firstName.set({value: 'dmitri'}).value).toEqual('dmitri')
+    expect(Field.set(firstName, {value: 'dmitri'}).value).toEqual('dmitri')
   })
 
   it('cannot directly mutate its value', () => {
     expect(() => name('dan').value = 'foo')
-      .toThrow('Use .set() method to change a field\'s value')
+      .toThrow('Fields are immutable.  Use Field.set() to create new fields with different values.')
   })
 
   it('can update its listed value', () => {
     const firstName = name('dan')
     expect(firstName.listed).toBe(false)
-    expect(firstName.set({listed: true}).listed).toBe(true)
+    expect(Field.set(firstName, {listed: true}).listed).toBe(true)
   })
 
   it('cannot directly mutate its listed value', () => {
     expect(() => name('dan').listed = false)
-      .toThrow('Use .set() method to change a field\'s listed value')
+      .toThrow('Fields are immutable.  Use Field.set() to create new fields with different values.')
   })
 
   it('can toggle its listed value', () => {
     const firstName = name('dan', {listed: true})
-    const privateFirstName = firstName.toggleListed()
-    const publicFirstName = privateFirstName.toggleListed()
+    const privateFirstName = Field.toggleListed(firstName)
+    const publicFirstName = Field.toggleListed(privateFirstName)
     expect(privateFirstName.listed).toBe(false)
     expect(publicFirstName.listed).toBe(true)
   })
@@ -106,26 +106,28 @@ describe('field', () => {
         rdf.Literal.fromValue('dan'),
         rdf.sym(defaultSources.listed)
       )
-      expect(name.fromQuad(quad)._toQuad(rdf, quad.subject)).toEqual(quad)
+      expect(Field.toQuad(rdf, quad.subject, name.fromQuad(quad))).toEqual(quad)
     })
 
     it('returns appropriate subject, predicate, value, and graph for value-constructed fields', () => {
-      expect(name('dan', {listed: true})._toQuad(rdf, rdf.sym('#me'))).toEqual(
-        rdf.quad(
-          rdf.sym('#me'),
-          vocab.foaf('name'),
-          rdf.Literal.fromValue('dan'),
-          rdf.sym(defaultSources.listed)
+      expect(Field.toQuad(rdf, rdf.sym('#me'), name('dan', {listed: true})))
+        .toEqual(
+          rdf.quad(
+            rdf.sym('#me'),
+            vocab.foaf('name'),
+            rdf.Literal.fromValue('dan'),
+            rdf.sym(defaultSources.listed)
+          )
         )
-      )
-      expect(name('dan', {listed: false})._toQuad(rdf, rdf.sym('#me'))).toEqual(
-        rdf.quad(
-          rdf.sym('#me'),
-          vocab.foaf('name'),
-          rdf.Literal.fromValue('dan'),
-          rdf.sym(defaultSources.unlisted)
+      expect(Field.toQuad(rdf, rdf.sym('#me'), name('dan', {listed: false})))
+        .toEqual(
+          rdf.quad(
+            rdf.sym('#me'),
+            vocab.foaf('name'),
+            rdf.Literal.fromValue('dan'),
+            rdf.sym(defaultSources.unlisted)
+          )
         )
-      )
     })
 
     it('remembers which resource it came from', () => {
@@ -133,7 +135,9 @@ describe('field', () => {
       // unlisted once again, it should remember which unlisted resource it
       // originally came from; it should not end up on the default unlisted
       // resource.
-      const originalResource = rdf.sym('https://example.com/another-private-resource')
+      const originalResource = rdf.sym(
+        'https://example.com/another-private-resource'
+      )
       const quad = rdf.quad(
         rdf.sym('#me'),
         vocab.foaf('name'),
@@ -141,18 +145,20 @@ describe('field', () => {
         originalResource
       )
       const firstName = name.fromQuad(quad)
-      const listedFirstName = firstName.toggleListed()
-      const unlistedFirstName = listedFirstName.toggleListed()
+      const listedFirstName = Field.toggleListed(firstName)
+      const unlistedFirstName = Field.toggleListed(listedFirstName)
       expect(firstName.listed).toBe(false)
       // Expect the initial non-default unlisted graph
-      expect(firstName._toQuad(rdf, quad.subject).graph).toEqual(quad.graph)
+      expect(Field.toQuad(rdf, quad.subject, firstName).graph)
+        .toEqual(quad.graph)
       expect(listedFirstName.listed).toBe(true)
       // Expect the default listed graph
-      expect(listedFirstName._toQuad(rdf, quad.subject).graph)
+      expect(Field.toQuad(rdf, quad.subject, listedFirstName).graph)
         .toEqual(rdf.sym(defaultSources.listed))
       expect(unlistedFirstName.listed).toBe(false)
       // Expect the initial non-default unlisted graph
-      expect(unlistedFirstName._toQuad(rdf, quad.subject).graph).toEqual(quad.graph)
+      expect(Field.toQuad(rdf, quad.subject, unlistedFirstName).graph)
+        .toEqual(quad.graph)
     })
   })
 })

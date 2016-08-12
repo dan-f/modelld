@@ -4,7 +4,7 @@ import Immutable from 'immutable'
 import rdf from 'rdflib'
 import solidNs from 'solid-namespace'
 
-import { fieldFactory } from '../src/field'
+import * as Field from '../src/field'
 import { modelFactory } from '../src/index'
 
 const vocab = solidNs(rdf)
@@ -57,7 +57,7 @@ describe('Model', () => {
        'http://mr-cool.example.com/another-unlisted': false
       }
     }
-    const field = fieldFactory(sourceConfig)
+    const field = Field.fieldFactory(sourceConfig)
     name = field(vocab.foaf('name'))
     phone = field(vocab.foaf('phone'))
     const profileModel = modelFactory(rdf, {
@@ -127,7 +127,7 @@ describe('Model', () => {
           const expectedDiff = {}
           expectedDiff[uri] = {}
           expectedDiff[uri].toDel = []
-          expectedDiff[uri].toIns = [newPhone._toQuad(rdf, subject).toString()]
+          expectedDiff[uri].toIns = [Field.toQuad(rdf, subject, newPhone).toString()]
           expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
         })
       })
@@ -140,7 +140,7 @@ describe('Model', () => {
         const updatedModel = model.remove('phone', removedPhone)
         const expectedDiff = {}
         expectedDiff[listedURI] = {}
-        expectedDiff[listedURI].toDel = [removedPhone._toQuad(rdf, subject).toString()]
+        expectedDiff[listedURI].toDel = [Field.toQuad(rdf, subject, removedPhone).toString()]
         expectedDiff[listedURI].toIns = []
         expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
       })
@@ -164,9 +164,9 @@ describe('Model', () => {
           expectedDiff[newPhoneURI] = {}
           expectedDiff[oldPhoneURI].toIns = []
           expectedDiff[newPhoneURI].toDel = []
-          expectedDiff[oldPhoneURI].toDel = [oldPhone._toQuad(rdf, subject).toString()]
+          expectedDiff[oldPhoneURI].toDel = [Field.toQuad(rdf, subject, oldPhone).toString()]
           expectedDiff[newPhoneURI].toIns = [
-            updatedModel.get('phone')[1]._toQuad(rdf, subject).toString()
+            Field.toQuad(rdf, subject, updatedModel.get('phone')[1]).toString()
           ]
           expect(updatedModel._diff(rdf)).toEqual(expectedDiff)
         })
