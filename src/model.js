@@ -105,7 +105,9 @@ export function add (model, key, field) {
  * @returns {Model} - the updated model.
  */
 export function remove (model, key, field) {
-  // TODO: bug - verify that the field is there to remove in the first place
+  if (get(model, key).filter(f => f._id === field._id).length === 0) {
+    return model
+  }
   return createModel(
     model.subject,
     model.fields.set(

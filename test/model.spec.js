@@ -96,6 +96,11 @@ describe('Model', () => {
     expect(Model.get(updatedModel, 'phone')).toEqual([secondPhone])
   })
 
+  it('can not remove fields which do not belong to the model', () => {
+    const notOwnedPhone = phone('tel:444-444-4444')
+    expect(Model.remove(model, 'phone', phone)).toEqual(model)
+  })
+
   it('can change the value of contained fields', () => {
     const firstPhone = Model.get(model, 'phone')[0]
     const secondPhone = Model.get(model, 'phone')[1]
