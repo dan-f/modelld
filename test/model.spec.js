@@ -40,7 +40,7 @@ describe('Model', () => {
           <http://xmlns.com/foaf/0.1/phone> <tel:123-456-7890> ;
           <http://xmlns.com/foaf/0.1/phone> <tel:098-765-4321> .
     `
-    subject = rdf.namedNode(webId)
+    subject = rdf.sym(webId)
     const graph = rdf.graph()
     rdf.parse(profile, graph, profileURI, 'text/turtle')
 
@@ -64,7 +64,7 @@ describe('Model', () => {
       name,
       phone
     })
-    model = profileModel(graph, subject)
+    model = profileModel(graph, webId)
   })
 
   it('can get fields by name', () => {

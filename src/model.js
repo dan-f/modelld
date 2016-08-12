@@ -15,7 +15,7 @@ import { isDefined } from './util'
  */
 export function modelFactory (rdf, fieldCreators) {
   return (graph, subjectStr) => {
-    const subject = rdf.namedNode(subject)
+    const subject = rdf.namedNode(subjectStr)
     const fields = Immutable.Map(
       Object.keys(fieldCreators).reduce((prevFields, fieldName) => {
         const fieldCreator = fieldCreators[fieldName]
