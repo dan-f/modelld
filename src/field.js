@@ -10,12 +10,12 @@ import { isDefined } from './util'
  * @typedef {Object} Field
  * @property {Object=} quad - The RDF quad object which the field may have been
  * constructed from.  A field either has a quad or a predicate.
- * @property {Object=} predicate- The RDF predicate which this field
- * represents.  A field either has a quad or a predicate.
+ * @property {Object=} predicate- The RDF predicate which the field represents.
+ * A field either has a quad or a predicate.
  * @property {String} id - A UUID.
- * @property {String} value - The value of this field.  Currently only strings
+ * @property {String} value - The value of the field.  Currently only strings
  * are supported.
- * @property {Boolean} listed - Whether or not this field is listed (public) or
+ * @property {Boolean} listed - Whether or not the field is listed (public) or
  * unlisted (private).
  */
 
@@ -47,7 +47,12 @@ export function fieldFactory (sourceConfig) {
       })
     }
     fieldCreator.fromQuad = quad => {
-      return createField({quad, sourceConfig})
+      return createField({
+        predicate: quad.predicate,
+        originalObject: quad.object,
+        originalSource: quad.graph,
+        sourceConfig
+      })
     }
     fieldCreator.predicate = predicate
     return fieldCreator
@@ -55,19 +60,30 @@ export function fieldFactory (sourceConfig) {
 }
 
 /**
- * Fields are constructed with a predicate, value, and listed status which can
- * either be specified via an RDF quad, or ad hoc values.
+ * Fields are constructed with a predicate, value, and listed status.  The value
+ * and listed status can either be passed in as 'options.value' and
+ * 'options.listed' or inferred through an RDF object node and an RDF graph
+ * node.
+ *
+ * In order to fully specify a field, you *must* always pass in
+ * 'options.predicate', 'options.sourceConfig', and one of the following three
+ * options:
+ * - `value` (and optionally `listed`) for an ad-hoc field
+ * - `originalObject`, (and optionally `originalSource`, `value`, or `listed`)
+ *   for a field tracking a quad which may have modified its value
  *
  * @param {Object} options - An options object specifying named parameters.
- * @param {Object=} options.quad - The original RDF quad which this field
- * represents.  This quad is the original value of the field.  Must either
- * provide a quad or a predicate.
- * @param {Object=} options.predicate - The RDF predicate which this field
+ * @param {Object=} options.originalObject - The original RDF object node that
+ * the field represents if it is being constructed from an existing quad.
+ * @param {Object=} options.originalSource - The original RDF graph node
+ * representing the source of the field if it is being constructed from an
+ * existing quad.
+ * @param {Object=} options.predicate - The RDF predicate which the field
  * represents.  Must either provide a quad or a predicate.
- * @param {String} options.value - Optionally specifies the current value of
- * this field.  Should only be provided by the field class internally when
+ * @param {String=} options.value - Optionally specifies the current value of
+ * the field.  Should only be provided by the field class internally when
  * updating a field.
- * @param {Boolean} options.listed - Whether or not this field is listed
+ * @param {Boolean=} options.listed - Whether or not the field is listed
  * (public) or unlisted (private).
  * @param {Object} options.sourceConfig - A configuration object containing
  * the default listed and unlisted source graphs, and a mapping of all source
@@ -81,22 +97,24 @@ export function fieldFactory (sourceConfig) {
  * unlisted.
  * @returns {Object} the newly constructed field.
  */
-function createField ({ quad, predicate, value, listed, sourceConfig }) {
-  // TODO: clean up this mess of quad vs predicate
-  const field = {}
-  if (isDefined(quad) && isDefined(predicate)) {
-    throw new Error('Must provide either quad or predicate, but not both.')
+function createField ({ predicate, value, listed, originalObject, originalSource, sourceConfig }) {
+  if (!(isDefined(predicate) && isDefined(sourceConfig)) ||
+      !(isDefined(value) || (isDefined(originalObject)))) {
+    throw new Error('Insufficient arguments.')
   }
-  if (isDefined(quad)) {
-    const { sourceIndex } = sourceConfig
-    field.quad = quad
-    field.value = quad.object.value
-    field.listed = isDefined(quad.graph)
-      ? sourceIndex[quad.graph.value]
-      : false
+  const field = {
+    predicate
   }
-  if (isDefined(predicate)) {
-    field.predicate = predicate
+  // Set default 'value' and 'listed' values from the original RDF quad's object
+  // and source properties.  This may be overridden by the current values of
+  // 'value' and 'listed'.
+  if (isDefined(originalObject)) {
+    field.originalObject = originalObject
+    field.value = originalObject.value
+  }
+  if (isDefined(originalSource)) {
+    field.originalSource = originalSource
+    field.listed = sourceConfig.sourceIndex[originalSource.value]
   }
   if (isDefined(value)) {
     field.value = value
@@ -104,42 +122,51 @@ function createField ({ quad, predicate, value, listed, sourceConfig }) {
   if (isDefined(listed)) {
     field.listed = listed
   } else {
-    // If we haven't already set a listed value, default to true.
+    // If we haven't already set a listed value, default to false.
     field.listed = isDefined(field.listed)
       ? field.listed
       : false
   }
   field._sourceConfig = sourceConfig
   field.id = uuid.v4()
-  return new Proxy(field, {
-    set: () => {
-      throw new Error('Fields are immutable.  Use Field.set() to create new' +
-                      ' fields with different values.')
-    }
-  })
+  return Object.freeze(field)
+}
+
+/**
+ * Gets the current source of a field.
+ *
+ * Handles edge cases in which a field may be repeatedly toggled
+ * listed/unlisted.  Sometimes a field's source should not be the default
+ * listed/unlisted source, but the one that the field originally came from.
+ *
+ * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js
+ * @param {Field} field - The field on which to locate the source.
+ */
+function getCurrentSource (rdf, field) {
+  const { defaultSources, sourceIndex } = field._sourceConfig
+  let sourceURI
+  if (isDefined(field.originalSource) &&
+      field.listed === sourceIndex[field.originalSource.value]) {
+    sourceURI = field.originalSource.value
+  } else {
+    sourceURI = field.listed ? defaultSources.listed : defaultSources.unlisted
+  }
+  return rdf.namedNode(sourceURI)
 }
 
 /**
  * Generates an RDF quad representing the current state of the field.
  *
  * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js
- * @param {Object} subject - The implicit subject for this field.  Particularly,
+ * @param {Object} subject - The implicit subject for the field.  Particularly,
  * an RDF subject, currently assumed to be an rdflib.js subject.
- * @param {Field} field - the field to convert to an RDF quad.
- * @returns {Object} An RDF quad representing the current state of this field.
+ * @param {Field} field - The field to convert to an RDF quad.
+ * @returns {Object} An RDF quad representing the current state of the field.
  */
 export function toQuad (rdf, subject, field) {
-  const { defaultSources, sourceIndex } = field._sourceConfig
-  let sourceURI
-  if (isDefined(field.quad) &&
-      field.listed === sourceIndex[field.quad.graph.value]) {
-    sourceURI = field.quad.graph.value
-  } else {
-    sourceURI = field.listed ? defaultSources.listed : defaultSources.unlisted
-  }
   let object
-  if (isDefined(field.quad)) {
-    object = clone(field.quad.object)
+  if (isDefined(field.originalObject)) {
+    object = clone(field.originalObject)
     object.value = field.value
     if (isDefined(object.uri)) {
       object.uri = field.value
@@ -147,11 +174,36 @@ export function toQuad (rdf, subject, field) {
   } else {
     object = rdf.Literal.fromValue(field.value)
   }
+
   return rdf.quad(
     subject,
-    isDefined(field.predicate) ? field.predicate : field.quad.predicate,
+    field.predicate,
     object,
-    rdf.namedNode(sourceURI)
+    getCurrentSource(rdf, field)
+  )
+}
+
+/**
+ * Returns the quad that a field was constructed from or null if it's an ad-hoc
+ * field.
+ *
+ * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js
+ * @param {Object} subject - The implicit subject for the field.  Particularly,
+ * an RDF subject, currently assumed to be an rdflib.js subject.
+ * @param {Field} field - The field on which to find an original quad.
+ * @returns {Object} An RDF quad representing the original state of the field.
+ */
+export function originalQuad (rdf, subject, field) {
+  if (!isDefined(field.originalObject)) {
+    return null
+  }
+  return rdf.quad(
+    subject,
+    field.predicate,
+    field.originalObject,
+    isDefined(field.originalSource)
+      ? field.originalSource
+      : undefined
   )
 }
 
@@ -175,7 +227,8 @@ export function toggleListed (field) {
  */
 export function set (field, { value = null, listed = null }) {
   return createField({
-    quad: field.quad,
+    originalObject: field.originalObject,
+    originalSource: field.originalSource,
     predicate: field.predicate,
     value: value !== null ? value : field.value,
     listed: listed !== null ? listed : field.listed,
@@ -184,19 +237,28 @@ export function set (field, { value = null, listed = null }) {
 }
 
 /**
- * TODO: document
- *
- * Basically updpates a field such that it starts tracking its current state
- * rather than its past state.
+ * Updpates a field such that it starts tracking its current state rather than
+ * its past state.
  *
  * Note that the field returned from this function no longer remembers anything
  * from its previous state.  Therefore if the field used to live on a
- * non-default graph and you toggled listed and then updated, if you toggle
- * listed again it won't return to the original graph but rather the default.
+ * non-default graph and you toggled listed and then call this function, if you
+ * toggle listed again it won't return to the original graph but rather the
+ * default.
+ *
+ * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js
+ * @param {Object} subject - The implicit subject for the field.  Particularly,
+ * an RDF subject, currently assumed to be an rdflib.js subject.
+ * @param {Field} field - The field to be rebuilt from its current state.
+ * @returns {Field} A new field tracking the provided field's state as its
+ * original state.
  */
 export function fromCurrentState (rdf, subject, field) {
+  const currentQuad = toQuad(rdf, subject, field)
   return createField({
-    quad: toQuad(rdf, subject, field),
+    predicate: field.predicate,
+    originalObject: currentQuad.object,
+    originalSource: currentQuad.graph,
     sourceConfig: field._sourceConfig
   })
 }

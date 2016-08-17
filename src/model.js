@@ -61,13 +61,7 @@ function createModel (subject, fields, graveyard = []) {
     fields,
     graveyard
   }
-  return new Proxy(model, {
-    set: () => {
-      throw new Error('Models are immutable.  Use Model.add(), Model.remove(),' +
-                      ' or Model.set() to create new models with different' +
-                      ' values.')
-    }
-  })
+  return Object.freeze(model)
 }
 
 /**
@@ -169,15 +163,15 @@ export function diff (rdf, model) {
       const map = Object.assign({}, previousMap)
       const newQuad = Field.toQuad(rdf, model.subject, field)
       const newSourceURI = newQuad.graph.value
-      const originalQuad = field.quad
-      const originalSourceURI = isDefined(originalQuad)
+      const originalQuad = Field.originalQuad(rdf, model.subject, field)
+      const originalSourceURI = originalQuad
         ? originalQuad.graph.value
         : null
       const fieldHasChanged = (
-        !isDefined(originalQuad) || !newQuad.equals(originalQuad)
+        !originalQuad || !newQuad.equals(originalQuad)
       )
       if (fieldHasChanged) {
-        if (isDefined(originalQuad)) {
+        if (originalQuad) {
           if (!isDefined(map[originalSourceURI])) {
             map[originalSourceURI] = {toDel: [], toIns: []}
           }
@@ -192,8 +186,8 @@ export function diff (rdf, model) {
     }, {})
 
   model.graveyard.forEach((field) => {
-    const quad = field.quad
-    if (isDefined(quad)) {
+    const quad = Field.originalQuad(rdf, model.subject, field)
+    if (quad) {
       const uri = quad.graph.uri
       if (!isDefined(diffMap[uri])) {
         diffMap[uri] = {toDel: [], toIns: []}

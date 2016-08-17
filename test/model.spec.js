@@ -170,7 +170,7 @@ describe('Model', () => {
             ? sourceConfig.defaultSources.listed
             : sourceConfig.defaultSources.unlisted
           const oldPhone = Model.get(model, 'phone')[1]
-          const oldPhoneURI = oldPhone.quad.graph.value
+          const oldPhoneURI = oldPhone.originalSource.value
           const updatedModel = Model.set(model, 'phone', oldPhone, fieldData)
           const expectedDiff = {}
           expectedDiff[oldPhoneURI] = {toIns: [], toDel: []}
@@ -266,16 +266,14 @@ describe('Model', () => {
               expect(phones.length).toBe(3)
               // The new field should now be tracking its previously "new" state
               // as its "old" state in the .quad property.
-              expect(phones[2].quad).toEqual(
-                rdf.quad(
-                  subject,
-                  vocab.foaf('phone'),
-                  rdf.Literal.fromValue(fieldData.value),
-                  rdf.namedNode(
-                    fieldData.listed
-                      ? sourceConfig.defaultSources.listed
-                      : sourceConfig.defaultSources.unlisted
-                  )
+              expect(phones[2].originalObject).toEqual(
+                rdf.Literal.fromValue(fieldData.value)
+              )
+              expect(phones[2].originalSource).toEqual(
+                rdf.namedNode(
+                  fieldData.listed
+                    ? sourceConfig.defaultSources.listed
+                    : sourceConfig.defaultSources.unlisted
                 )
               )
               expect(Model.diff(rdf, newModel)).toEqual({})

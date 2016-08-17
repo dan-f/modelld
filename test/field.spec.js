@@ -29,7 +29,7 @@ describe('Field', () => {
     expect(name('dan').value).toEqual('dan')
   })
 
-  it('can track the original RDF quad', () => {
+  it('can track the original RDF object property', () => {
     const originalQuad = rdf.quad(
       rdf.sym('#me'),
       vocab.foaf('name'),
@@ -76,7 +76,7 @@ describe('Field', () => {
 
   it('cannot directly mutate its value', () => {
     expect(() => { name('dan').value = 'foo' })
-      .toThrow('Fields are immutable.  Use Field.set() to create new fields with different values.')
+      .toThrow(TypeError)
   })
 
   it('can update its listed value', () => {
@@ -87,7 +87,7 @@ describe('Field', () => {
 
   it('cannot directly mutate its listed value', () => {
     expect(() => { name('dan').listed = false })
-      .toThrow('Fields are immutable.  Use Field.set() to create new fields with different values.')
+      .toThrow(TypeError)
   })
 
   it('can toggle its listed value', () => {
@@ -98,7 +98,56 @@ describe('Field', () => {
     expect(publicFirstName.listed).toBe(true)
   })
 
-  describe('RDF statement generation', () => {
+  it('can create a new field from its current state', () => {
+    const quad = rdf.quad(
+      rdf.sym('#me'),
+      vocab.foaf('name'),
+      rdf.Literal.fromValue('dan'),
+      rdf.sym(defaultSources.listed)
+    )
+    const field = name.fromQuad(quad)
+    const updatedField = Field.set(field, {value: 'bob', listed: false})
+    const fieldTrackingCurrentState = Field.fromCurrentState(rdf, quad.subject, updatedField)
+    expect(fieldTrackingCurrentState.originalObject).toEqual(
+      rdf.Literal.fromValue('bob')
+    )
+    expect(fieldTrackingCurrentState.originalSource).toEqual(
+      rdf.namedNode(defaultSources.unlisted)
+    )
+  })
+
+  describe('originalQuad', () => {
+    it('returns the original quad that the field represents', () => {
+      const quad = rdf.quad(
+        rdf.sym('#me'),
+        vocab.foaf('name'),
+        rdf.Literal.fromValue('dan'),
+        rdf.sym(defaultSources.listed)
+      )
+      expect(Field.originalQuad(rdf, quad.subject, name.fromQuad(quad))).toEqual(quad)
+    })
+
+    it('returns a quad with no graph URI for quads without a source', () => {
+      const quad = rdf.quad(
+        rdf.sym('#me'),
+        vocab.foaf('name'),
+        rdf.Literal.fromValue('dan')
+      )
+      expect(Field.originalQuad(rdf, quad.subject, name.fromQuad(quad))).toEqual(
+        rdf.quad(
+          rdf.sym('#me'),
+          vocab.foaf('name'),
+          rdf.Literal.fromValue('dan')
+        )
+      )
+    })
+
+    it('returns null for fields which do not track an original quad', () => {
+      expect(Field.originalQuad(rdf, rdf.sym('#me'), name('dan'))).toBe(null)
+    })
+  })
+
+  describe('toQuad', () => {
     it('returns the original quad for a quad-constructed field', () => {
       const quad = rdf.quad(
         rdf.sym('#me'),
@@ -135,7 +184,7 @@ describe('Field', () => {
       // unlisted once again, it should remember which unlisted resource it
       // originally came from; it should not end up on the default unlisted
       // resource.
-      const originalResource = rdf.sym(
+      const originalResource = rdf.namedNode(
         'https://example.com/another-private-resource'
       )
       const quad = rdf.quad(
