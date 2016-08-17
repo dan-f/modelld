@@ -63,9 +63,9 @@ function createModel (subject, fields, graveyard = []) {
   }
   return new Proxy(model, {
     set: () => {
-      throw new Error('Models are immutable.  Use Model.add(), Model.remove(),'
-                      + ' or Model.set() to create new models with different'
-                      + ' values.')
+      throw new Error('Models are immutable.  Use Model.add(), Model.remove(),' +
+                      ' or Model.set() to create new models with different' +
+                      ' values.')
     }
   })
 }
@@ -105,14 +105,14 @@ export function add (model, key, field) {
  * @returns {Model} - the updated model.
  */
 export function remove (model, key, field) {
-  if (get(model, key).filter(f => f._id === field._id).length === 0) {
+  if (get(model, key).filter(f => f.id === field.id).length === 0) {
     return model
   }
   return createModel(
     model.subject,
     model.fields.set(
       key,
-      model.fields.get(key).filter(f => field._id !== f._id)
+      model.fields.get(key).filter(f => field.id !== f.id)
     ),
     [...model.graveyard, field]
   )
@@ -135,7 +135,7 @@ export function set (model, key, oldField, newFieldArgs) {
     model.fields.set(
       key,
       model.fields.get(key).map(f => {
-        return f._id === oldField._id ? Field.set(f, newFieldArgs) : f
+        return f.id === oldField.id ? Field.set(f, newFieldArgs) : f
       })
     )
   )
@@ -169,15 +169,15 @@ export function diff (rdf, model) {
       const map = Object.assign({}, previousMap)
       const newQuad = Field.toQuad(rdf, model.subject, field)
       const newSourceURI = newQuad.graph.value
-      const originalQuad = field._quad
-      const originalSourceURI = isDefined(field._quad)
-        ? field._quad.graph.value
+      const originalQuad = field.quad
+      const originalSourceURI = isDefined(originalQuad)
+        ? originalQuad.graph.value
         : null
       const fieldHasChanged = (
         !isDefined(originalQuad) || !newQuad.equals(originalQuad)
       )
       if (fieldHasChanged) {
-        if (originalSourceURI) {
+        if (isDefined(originalQuad)) {
           if (!isDefined(map[originalSourceURI])) {
             map[originalSourceURI] = {toDel: [], toIns: []}
           }
@@ -192,7 +192,7 @@ export function diff (rdf, model) {
     }, {})
 
   model.graveyard.forEach((field) => {
-    const quad = field._quad
+    const quad = field.quad
     if (isDefined(quad)) {
       const uri = quad.graph.uri
       if (!isDefined(diffMap[uri])) {
@@ -204,3 +204,46 @@ export function diff (rdf, model) {
 
   return diffMap
 }
+
+/**
+ * TODO: document
+ */
+export function save (rdf, web, model) {
+  const diffMap = diff(rdf, model)
+  if (Object.keys(diffMap).length === 0) {
+    return Promise.resolve(model)
+  }
+  const webClient = web(rdf)
+  return Promise.all(
+    Object.keys(diffMap).map(uri => {
+      return webClient.patch(uri, diffMap[uri].toDel, diffMap[uri].toIns)
+    })
+  ).then(solidResponses => {
+    return createModel(
+      model.subject,
+      model.fields
+        .map(fieldsArray => {
+          return fieldsArray.map(field => Field.fromCurrentState(rdf, model.subject, field))
+        })
+    )
+  }).catch(err => {
+    // TODO: stil refresh the model and return it
+    console.log(err)
+  })
+}
+
+// TODO: implement
+export function refresh (web, model) {
+  throw new Error('not yet implemented')
+}
+
+// I think the problem here is that the `values` array is going to return some
+// sort of wrapped XHR response (check w/ Dmitri).  What I want to do is to
+// return the model which represents the current state of the server post-save.
+// We can't just return the old model because the cached original RDF quads may
+// have been deleted from the server(s).  I think that we'll have to iterate
+// over all the field URIs and refresh them, and then recreate the model from
+// those responses.  We could also consider it out of scope since this library
+// doesn't know how the original data for the model was initially fetched.
+//
+// TODO: document assumptions

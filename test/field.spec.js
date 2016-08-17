@@ -7,7 +7,7 @@ import * as Field from '../src/field'
 
 const vocab = solidNs(rdf)
 
-describe('field', () => {
+describe('Field', () => {
   const defaultSources = {
     listed: 'https://example.com/public-resource',
     unlisted: 'https://example.com/private-resource'
@@ -75,7 +75,7 @@ describe('field', () => {
   })
 
   it('cannot directly mutate its value', () => {
-    expect(() => name('dan').value = 'foo')
+    expect(() => { name('dan').value = 'foo' })
       .toThrow('Fields are immutable.  Use Field.set() to create new fields with different values.')
   })
 
@@ -86,7 +86,7 @@ describe('field', () => {
   })
 
   it('cannot directly mutate its listed value', () => {
-    expect(() => name('dan').listed = false)
+    expect(() => { name('dan').listed = false })
       .toThrow('Fields are immutable.  Use Field.set() to create new fields with different values.')
   })
 

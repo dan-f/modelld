@@ -8,11 +8,11 @@ import { isDefined } from './util'
  * whether or not the field is public (listed).
  *
  * @typedef {Object} Field
- * @property {Object=} _quad - The RDF quad object which the field may have been
+ * @property {Object=} quad - The RDF quad object which the field may have been
  * constructed from.  A field either has a quad or a predicate.
- * @property {Object=} _predicate- The RDF predicate which this field
+ * @property {Object=} predicate- The RDF predicate which this field
  * represents.  A field either has a quad or a predicate.
- * @property {String} _id - A UUID.
+ * @property {String} id - A UUID.
  * @property {String} value - The value of this field.  Currently only strings
  * are supported.
  * @property {Boolean} listed - Whether or not this field is listed (public) or
@@ -82,20 +82,21 @@ export function fieldFactory (sourceConfig) {
  * @returns {Object} the newly constructed field.
  */
 function createField ({ quad, predicate, value, listed, sourceConfig }) {
+  // TODO: clean up this mess of quad vs predicate
   const field = {}
   if (isDefined(quad) && isDefined(predicate)) {
     throw new Error('Must provide either quad or predicate, but not both.')
   }
   if (isDefined(quad)) {
     const { sourceIndex } = sourceConfig
-    field._quad = quad
+    field.quad = quad
     field.value = quad.object.value
     field.listed = isDefined(quad.graph)
       ? sourceIndex[quad.graph.value]
       : false
   }
   if (isDefined(predicate)) {
-    field._predicate = predicate
+    field.predicate = predicate
   }
   if (isDefined(value)) {
     field.value = value
@@ -109,11 +110,11 @@ function createField ({ quad, predicate, value, listed, sourceConfig }) {
       : false
   }
   field._sourceConfig = sourceConfig
-  field._id = uuid.v4()
+  field.id = uuid.v4()
   return new Proxy(field, {
     set: () => {
-      throw new Error('Fields are immutable.  Use Field.set() to create new'
-                      + ' fields with different values.')
+      throw new Error('Fields are immutable.  Use Field.set() to create new' +
+                      ' fields with different values.')
     }
   })
 }
@@ -130,22 +131,25 @@ function createField ({ quad, predicate, value, listed, sourceConfig }) {
 export function toQuad (rdf, subject, field) {
   const { defaultSources, sourceIndex } = field._sourceConfig
   let sourceURI
-  if (isDefined(field._quad)
-      && field.listed === sourceIndex[field._quad.graph.value]) {
-    sourceURI = field._quad.graph.value
+  if (isDefined(field.quad) &&
+      field.listed === sourceIndex[field.quad.graph.value]) {
+    sourceURI = field.quad.graph.value
   } else {
     sourceURI = field.listed ? defaultSources.listed : defaultSources.unlisted
   }
   let object
-  if (isDefined(field._quad)) {
-    object = clone(field._quad.object)
+  if (isDefined(field.quad)) {
+    object = clone(field.quad.object)
     object.value = field.value
+    if (isDefined(object.uri)) {
+      object.uri = field.value
+    }
   } else {
     object = rdf.Literal.fromValue(field.value)
   }
   return rdf.quad(
     subject,
-    isDefined(field._quad) ? field._quad.predicate : field._predicate,
+    isDefined(field.predicate) ? field.predicate : field.quad.predicate,
     object,
     rdf.namedNode(sourceURI)
   )
@@ -171,10 +175,28 @@ export function toggleListed (field) {
  */
 export function set (field, { value = null, listed = null }) {
   return createField({
-    quad: field._quad,
-    predicate: field._predicate,
+    quad: field.quad,
+    predicate: field.predicate,
     value: value !== null ? value : field.value,
     listed: listed !== null ? listed : field.listed,
+    sourceConfig: field._sourceConfig
+  })
+}
+
+/**
+ * TODO: document
+ *
+ * Basically updpates a field such that it starts tracking its current state
+ * rather than its past state.
+ *
+ * Note that the field returned from this function no longer remembers anything
+ * from its previous state.  Therefore if the field used to live on a
+ * non-default graph and you toggled listed and then updated, if you toggle
+ * listed again it won't return to the original graph but rather the default.
+ */
+export function fromCurrentState (rdf, subject, field) {
+  return createField({
+    quad: toQuad(rdf, subject, field),
     sourceConfig: field._sourceConfig
   })
 }

@@ -8,7 +8,8 @@
     "build:lib": "babel src -d lib",
     "build:bundle": "echo \"Error: not yet implemented\" && exit 1",
     "test": "mocha --compilers js:babel-core/register test/*.spec.js",
-    "test:develop": "mocha -d -w --compilers js:babel-core/register test/*.spec.js"
+    "test:develop": "mocha -d -w --compilers js:babel-core/register test/*.spec.js",
+    "lint": "standard src/**/*.js test/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -34,7 +35,9 @@
     "expect": "^1.20.2",
     "mocha": "^3.0.2",
     "rdflib": "^0.9.0",
-    "solid-namespace": "^0.1.0"
+    "sinon": "^1.17.5",
+    "solid-namespace": "^0.1.0",
+    "standard": "^7.1.2"
   },
   "dependencies": {
     "immutable": "^3.8.1",
