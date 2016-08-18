@@ -142,7 +142,7 @@ function createField ({ predicate, value, listed, originalObject, originalSource
  * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js
  * @param {Field} field - The field on which to locate the source.
  */
-function getCurrentSource (rdf, field) {
+export function getCurrentSource (rdf, field) {
   const { defaultSources, sourceIndex } = field._sourceConfig
   let sourceURI
   if (isDefined(field.originalSource) &&

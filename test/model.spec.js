@@ -189,8 +189,8 @@ describe('Model', () => {
 
   describe('saving', () => {
     const createSpies = () => {
-      const patchSpy = spy((uri, toDel, toIns) => Promise.resolve())
-      const webClientSpy = spy(rdf => { return {patch: patchSpy} })
+      const patchSpy = spy((uri, toDel, toIns) => Promise.resolve({url: uri}))
+      const webClientSpy = spy(rdf => ({patch: patchSpy}))
       return {patchSpy, webClientSpy}
     }
 

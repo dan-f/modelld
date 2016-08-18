@@ -200,44 +200,88 @@ export function diff (rdf, model) {
 }
 
 /**
- * TODO: document
+ * Given a diff map (from Model.diff), patch each resource in the diff map using
+ * the web client's patch method.  Return a Promise which resolves to the set of
+ * URIs which were successfully patched.  Note that the Promise does not reject;
+ * if some resources failed to be patched, they're not included in the URI set.
+ *
+ * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js.
+ * @param {Object} web - A web client library, currently assumed to be
+ * @param {Object} diffMap - The result of running Model.diff() on a model.
+ * @returns {Promise<Set<String>>} A Promise which always resolves to the set of
+ * URIs for which the patches succeeded.
+ */
+function patchURIs (rdf, web, diffMap) {
+  const webClient = web(rdf)
+  const urisToPatch = Object.keys(diffMap)
+  return Promise.all(
+    urisToPatch.map(uri => {
+      return webClient
+        .patch(uri, diffMap[uri].toDel, diffMap[uri].toIns)
+        .then(solidResponse => ({URI: solidResponse.url, succeeded: true}))
+        .catch(solidResponse => ({URI: solidResponse.url, succeeded: false}))
+    }))
+    .then(sourceResults => {
+      return new Set(
+        sourceResults
+          .filter(result => result.succeeded)
+          .map(result => result.URI)
+      )
+    })
+}
+
+/**
+ * Maps a function onto every field within the model, and returns a new model
+ * with the corresponding fields.
+ *
+ * @param {Function(Field)} fn - A function to apply to every field in the
+ * model.  The function receives one argument - the current field.
+ * @param {Model} model - the model being mapped over.
+ * @returns {Model} A new model containing the result of the field mapping.
+ */
+export function map (fn, model) {
+  return createModel(
+    model.subject,
+    model.fields.map(fieldsArray => fieldsArray.map(fn))
+  )
+}
+
+/**
+ * Save model updates using an LDP web client.
+ *
+ * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js.
+ * @param {Object} web - A web client library, currently assumed to be
+ * solid-web-client.
+ * @param {Model} model - The model to save.
+ * @returns {Promise<Model>} The updated model.
  */
 export function save (rdf, web, model) {
   const diffMap = diff(rdf, model)
-  if (Object.keys(diffMap).length === 0) {
+  const urisToPatch = Object.keys(diffMap)
+  if (urisToPatch.length === 0) {
     return Promise.resolve(model)
   }
-  const webClient = web(rdf)
-  return Promise.all(
-    Object.keys(diffMap).map(uri => {
-      return webClient.patch(uri, diffMap[uri].toDel, diffMap[uri].toIns)
+  return patchURIs(rdf, web, diffMap)
+    .then(patchedURIs => {
+      const updatedModel = map(
+        field => patchedURIs.has(Field.getCurrentSource(rdf, field).value)
+          ? Field.fromCurrentState(rdf, model.subject, field)
+          : field,
+        model
+      )
+      const allPatchesSucceded = patchedURIs.size === urisToPatch.length
+      if (allPatchesSucceded) {
+        return updatedModel
+      } else {
+        // TODO: extract error type
+        const err = Error('Not all patches succeeded')
+        err.model = updatedModel
+        throw err
+      }
     })
-  ).then(solidResponses => {
-    return createModel(
-      model.subject,
-      model.fields
-        .map(fieldsArray => {
-          return fieldsArray.map(field => Field.fromCurrentState(rdf, model.subject, field))
-        })
-    )
-  }).catch(err => {
-    // TODO: stil refresh the model and return it
-    console.log(err)
-  })
 }
 
 // TODO: implement
 export function refresh (web, model) {
   throw new Error('not yet implemented')
 }
-
-// I think the problem here is that the `values` array is going to return some
-// sort of wrapped XHR response (check w/ Dmitri).  What I want to do is to
-// return the model which represents the current state of the server post-save.
-// We can't just return the old model because the cached original RDF quads may
-// have been deleted from the server(s).  I think that we'll have to iterate
-// over all the field URIs and refresh them, and then recreate the model from
-// those responses.  We could also consider it out of scope since this library
-// doesn't know how the original data for the model was initially fetched.
-//
-// TODO: document assumptions
