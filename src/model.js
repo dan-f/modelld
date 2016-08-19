@@ -124,15 +124,9 @@ export function remove (model, key, field) {
  * @returns {Model} - the updated model.
  */
 export function set (model, key, oldField, newFieldArgs) {
-  return createModel(
-    model.subject,
-    model.fields.set(
-      key,
-      model.fields.get(key).map(f => {
-        return f.id === oldField.id ? Field.set(f, newFieldArgs) : f
-      })
-    )
-  )
+  return map(field => {
+    return field.id === oldField.id ? Field.set(field, newFieldArgs) : field
+  }, model)
 }
 
 /**
@@ -242,7 +236,16 @@ function patchURIs (rdf, web, diffMap) {
 export function map (fn, model) {
   return createModel(
     model.subject,
-    model.fields.map(fieldsArray => fieldsArray.map(fn))
+    model.fields.map(fieldsArray => fieldsArray.map(fn)),
+    model.graveyard
+  )
+}
+
+function clearGraveyard (model) {
+  return createModel(
+    model.subject,
+    model.fields,
+    []
   )
 }
 
@@ -263,12 +266,12 @@ export function save (rdf, web, model) {
   }
   return patchURIs(rdf, web, diffMap)
     .then(patchedURIs => {
-      const updatedModel = map(
+      const updatedModel = clearGraveyard(map(
         field => patchedURIs.has(Field.getCurrentSource(rdf, field).value)
           ? Field.fromCurrentState(rdf, model.subject, field)
           : field,
         model
-      )
+      ))
       const allPatchesSucceded = patchedURIs.size === urisToPatch.length
       if (allPatchesSucceded) {
         return updatedModel
@@ -280,9 +283,4 @@ export function save (rdf, web, model) {
         throw err
       }
     })
-}
-
-// TODO: implement
-export function refresh (web, model) {
-  throw new Error('not yet implemented')
 }

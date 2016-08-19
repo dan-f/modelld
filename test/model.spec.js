@@ -392,10 +392,12 @@ describe('Model', () => {
             const updatedModel = err.model
             expectWebCalls(webClientSpy, patchSpy, expectedPatchCalls)
             const addedPhone = Model.get(updatedModel, 'phone')[2]
-            const phoneNotPatched = Model.get(updatedModel, 'phone')[3]
+            expect(addedPhone.value).toBe('tel:000-000-0000')
             expect(Field.originalQuad(rdf, subject, addedPhone).toString()).toBe(
               `<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`
             )
+            const phoneNotPatched = Model.get(updatedModel, 'phone')[3]
+            expect(phoneNotPatched.value).toBe('tel:111-111-1111')
             expect(Field.originalQuad(rdf, subject, phoneNotPatched)).toBe(null)
           })
       })
