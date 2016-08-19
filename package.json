@@ -17,7 +17,8 @@
     "coverage:report": "nyc report --repoprter=text-lcov --reporter=html",
     "coverage:coveralls": "nyc report --reporter=text-lcov | coveralls",
     "lint": "standard src/**.js test/**.js",
-    "preversion": "npm run lint && npm test",
+    "preversion": "npm run lint && npm test && npm run coverage:check",
+    "postversion": "git push --tags",
     "prepublish": "npm run build"
   },
   "repository": {
