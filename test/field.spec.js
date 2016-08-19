@@ -3,7 +3,7 @@ import expect from 'expect'
 import rdf from 'rdflib'
 import solidNs from 'solid-namespace'
 
-import { fieldFactory } from '../src/field'
+import { fieldFactory, Field } from '../src/field'
 
 const vocab = solidNs(rdf)
 
@@ -24,6 +24,28 @@ describe('Field', () => {
   }
   const factory = fieldFactory(sourceConfig)
   const name = factory(vocab.foaf('name'))
+
+  describe('raw constructor', () => {
+    it('requires a predicate, source config, and either a value or an originalObject', () => {
+      const predicate = vocab.foaf('name')
+      // Insufficient arguments
+      expect(() => new Field()).toThrow(Error)
+      expect(() => new Field({})).toThrow(Error)
+      expect(() => new Field({predicate})).toThrow(Error)
+      expect(() => new Field({predicate, sourceConfig})).toThrow(Error)
+      // Sufficient arguments
+      expect(() => new Field({predicate, sourceConfig, value: 'dan'}))
+        .toNotThrow()
+      expect(() => {
+        new Field({
+          predicate,
+          sourceConfig,
+          originalObject:
+          rdf.Literal.fromValue('dan')
+        })
+      }).toNotThrow()
+    })
+  })
 
   it('has a value', () => {
     expect(name('dan').value).toEqual('dan')

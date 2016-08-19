@@ -44,7 +44,7 @@ export function modelFactory (rdf, fieldCreators) {
   }
 }
 
-class Model {
+export class Model {
   /**
    * Creates a model.  Requires subject, fields, and optional graveyard.
    *

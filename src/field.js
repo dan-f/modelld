@@ -59,7 +59,7 @@ export function fieldFactory (sourceConfig) {
   }
 }
 
-class Field {
+export class Field {
   /**
    * Fields are constructed with a predicate, value, and listed status.  The
    * value and listed status can either be passed in as 'options.value' and
@@ -98,7 +98,7 @@ class Field {
    * unlisted.
    * @returns {Object} the newly constructed field.
    */
-  constructor ({ predicate, value, listed, originalObject, originalSource, sourceConfig }) {
+  constructor ({ predicate, value, listed, originalObject, originalSource, sourceConfig } = {}) {
     if (!(isDefined(predicate) && isDefined(sourceConfig)) ||
         !(isDefined(value) || (isDefined(originalObject)))) {
       throw new Error('Insufficient arguments.')
