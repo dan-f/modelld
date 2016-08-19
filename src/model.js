@@ -141,14 +141,13 @@ function filterToGraveyard (fn, model) {
  * Replace a field on a model.
  *
  * @param {Model} model - the model.
- * @param {String} key - the field key used to find the key to remove.
  * @param {Field} oldField - the field which should be removed.
  * @param {Object} newFieldArgs - arguments to create the new field.
  * @param {String} newFieldArgs.value - the new field's value.
  * @param {Boolean} newFieldArgs.listed - the new field's listed value.
  * @returns {Model} - the updated model.
  */
-export function set (model, key, oldField, newFieldArgs) {
+export function set (model, oldField, newFieldArgs) {
   return map(field => {
     return field.id === oldField.id ? Field.set(field, newFieldArgs) : field
   }, model)

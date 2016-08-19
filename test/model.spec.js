@@ -107,7 +107,7 @@ describe('Model', () => {
     const firstPhone = Model.get(model, 'phone')[0]
     const secondPhone = Model.get(model, 'phone')[1]
     const newPhone = phone('tel:000-000-0000')
-    const updatedModel = Model.set(model, 'phone', firstPhone, newPhone)
+    const updatedModel = Model.set(model, firstPhone, newPhone)
     expect(Model.get(updatedModel, 'phone').length).toBe(2)
     expect(Model.get(updatedModel, 'phone')[0].quad).toEqual(firstPhone.quad)
     expect(Model.get(updatedModel, 'phone')[0].value).toEqual(newPhone.value)
@@ -171,7 +171,7 @@ describe('Model', () => {
             : sourceConfig.defaultSources.unlisted
           const oldPhone = Model.get(model, 'phone')[1]
           const oldPhoneURI = oldPhone.originalSource.value
-          const updatedModel = Model.set(model, 'phone', oldPhone, fieldData)
+          const updatedModel = Model.set(model, oldPhone, fieldData)
           const expectedDiff = {}
           expectedDiff[oldPhoneURI] = {toIns: [], toDel: []}
           expectedDiff[newPhoneURI] = {toIns: [], toDel: []}
@@ -351,9 +351,7 @@ describe('Model', () => {
         it(`should patch the new and removed field URIs for a ${fieldData.listed ? 'listed' : 'unlisted'} field and update the model`, () => {
           const {patchSpy, webClientSpy} = createSpies()
           const removedPhone = Model.get(model, 'phone')[1]
-          const updatedModel = Model.set(
-            model, 'phone', removedPhone, fieldData
-          )
+          const updatedModel = Model.set(model, removedPhone, fieldData)
           return Model
             .save(rdf, webClientSpy, updatedModel)
             .then(newModel => {
