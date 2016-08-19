@@ -36,14 +36,14 @@ describe('Field', () => {
       // Sufficient arguments
       expect(() => new Field({predicate, sourceConfig, value: 'dan'}))
         .toNotThrow()
-      expect(() => {
+      expect(() =>
         new Field({
           predicate,
           sourceConfig,
           originalObject:
           rdf.Literal.fromValue('dan')
         })
-      }).toNotThrow()
+      ).toNotThrow()
     })
   })
 
