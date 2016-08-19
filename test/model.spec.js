@@ -71,9 +71,9 @@ describe('Model', () => {
   })
 
   it('can get fields by name', () => {
-    const nameFields = Model.get(model, 'name')
+    const nameFields = model.get('name')
     const nameField = nameFields[0]
-    const phoneFields = Model.get(model, 'phone')
+    const phoneFields = model.get('phone')
     expect(nameFields.length).toEqual(1)
     expect(nameField.value).toEqual('Mr. Cool')
     expect(phoneFields.length).toEqual(2)
@@ -82,42 +82,43 @@ describe('Model', () => {
   })
 
   it('returns an empty array for undefined field names', () => {
-    expect(Model.get(model, 'undefined-field')).toEqual([])
+    expect(model.get('undefined-field')).toEqual([])
   })
 
   it('can add new fields', () => {
-    const newModel = Model.add(model, 'name', name('Ms. Cool'))
-    expect(Model.get(newModel, 'name').map(field => field.value))
+    const newModel = model.add('name', name('Ms. Cool'))
+    expect(newModel.get('name').map(field => field.value))
       .toEqual(['Mr. Cool', 'Ms. Cool'])
   })
 
   it('can remove existing fields', () => {
-    const firstPhone = Model.get(model, 'phone')[0]
-    const secondPhone = Model.get(model, 'phone')[1]
-    const updatedModel = Model.remove(model, firstPhone)
-    expect(Model.get(updatedModel, 'phone')).toEqual([secondPhone])
+    const firstPhone = model.get('phone')[0]
+    const secondPhone = model.get('phone')[1]
+    const updatedModel = model.remove(firstPhone)
+    expect(updatedModel.get('phone')).toEqual([secondPhone])
   })
 
   it('can not remove fields which do not belong to the model', () => {
     const notOwnedPhone = phone('tel:444-444-4444')
-    expect(Model.remove(model, notOwnedPhone)).toEqual(model)
+    expect(model.remove(notOwnedPhone)).toEqual(model)
   })
 
   it('can change the value of contained fields', () => {
-    const firstPhone = Model.get(model, 'phone')[0]
-    const secondPhone = Model.get(model, 'phone')[1]
+    const firstPhone = model.get('phone')[0]
+    const secondPhone = model.get('phone')[1]
     const newPhone = phone('tel:000-000-0000')
-    const updatedModel = Model.set(model, firstPhone, newPhone)
-    expect(Model.get(updatedModel, 'phone').length).toBe(2)
-    expect(Model.get(updatedModel, 'phone')[0].quad).toEqual(firstPhone.quad)
-    expect(Model.get(updatedModel, 'phone')[0].value).toEqual(newPhone.value)
-    expect(Model.get(updatedModel, 'phone')[1]).toEqual(secondPhone)
+    const updatedModel = model.set(firstPhone, newPhone)
+    const phones = updatedModel.get('phone')
+    expect(phones.length).toBe(2)
+    expect(phones[0].quad).toEqual(firstPhone.quad)
+    expect(phones[0].value).toEqual(newPhone.value)
+    expect(phones[1]).toEqual(secondPhone)
   })
 
   describe('diffing', () => {
     describe('for unchanged models', () => {
       it('shows no changes', () => {
-        expect(Model.diff(rdf, model)).toEqual({})
+        expect(model.diff(rdf)).toEqual({})
       })
     })
 
@@ -132,14 +133,14 @@ describe('Model', () => {
             ? sourceConfig.defaultSources.listed
             : sourceConfig.defaultSources.unlisted
           const newPhone = phone(fieldData.value, {listed: fieldData.listed})
-          const updatedModel = Model.add(model, 'phone', newPhone)
+          const updatedModel = model.add('phone', newPhone)
           const expectedDiff = {}
           expectedDiff[uri] = {}
           expectedDiff[uri].toDel = []
           expectedDiff[uri].toIns = [
             Field.toQuad(rdf, subject, newPhone).toString()
           ]
-          expect(Model.diff(rdf, updatedModel)).toEqual(expectedDiff)
+          expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
         })
       })
     })
@@ -147,15 +148,15 @@ describe('Model', () => {
     describe('after removing fields', () => {
       it('shows that a field should be removed from the graph', () => {
         const listedURI = sourceConfig.defaultSources.listed
-        const removedPhone = Model.get(model, 'phone')[1]
-        const updatedModel = Model.remove(model, removedPhone)
+        const removedPhone = model.get('phone')[1]
+        const updatedModel = model.remove(removedPhone)
         const expectedDiff = {}
         expectedDiff[listedURI] = {}
         expectedDiff[listedURI].toDel = [
           Field.toQuad(rdf, subject, removedPhone).toString()
         ]
         expectedDiff[listedURI].toIns = []
-        expect(Model.diff(rdf, updatedModel)).toEqual(expectedDiff)
+        expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
       })
     })
 
@@ -169,9 +170,9 @@ describe('Model', () => {
           const newPhoneURI = fieldData.listed
             ? sourceConfig.defaultSources.listed
             : sourceConfig.defaultSources.unlisted
-          const oldPhone = Model.get(model, 'phone')[1]
+          const oldPhone = model.get('phone')[1]
           const oldPhoneURI = oldPhone.originalSource.value
-          const updatedModel = Model.set(model, oldPhone, fieldData)
+          const updatedModel = model.set(oldPhone, fieldData)
           const expectedDiff = {}
           expectedDiff[oldPhoneURI] = {toIns: [], toDel: []}
           expectedDiff[newPhoneURI] = {toIns: [], toDel: []}
@@ -181,7 +182,7 @@ describe('Model', () => {
           expectedDiff[newPhoneURI].toIns.push(
             `<${webId}> ${vocab.foaf('phone')} <${fieldData.value}> .`
           )
-          expect(Model.diff(rdf, updatedModel)).toEqual(expectedDiff)
+          expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
         })
       })
     })
@@ -212,8 +213,8 @@ describe('Model', () => {
     describe('for unchanged models', () => {
       it('should return the current model', () => {
         const {patchSpy, webClientSpy} = createSpies()
-        return Model
-          .save(rdf, webClientSpy, model)
+        return model
+          .save(rdf, webClientSpy)
           .then(updatedModel => {
             expect(webClientSpy.called).toBe(false)
             expect(patchSpy.called).toBe(false)
@@ -259,14 +260,12 @@ describe('Model', () => {
         it(`should patch the new field's URI for a ${fieldData.listed ? 'listed' : 'unlisted'} field and return the updated model`, () => {
           const {patchSpy, webClientSpy} = createSpies()
           const newPhone = phone(fieldData.value, {listed: fieldData.listed})
-          const modelPlusField = Model.add(
-            model, 'phone', newPhone
-          )
-          return Model
-            .save(rdf, webClientSpy, modelPlusField)
+          const modelPlusField = model.add('phone', newPhone)
+          return modelPlusField
+            .save(rdf, webClientSpy)
             .then(newModel => {
               expectWebCalls(webClientSpy, patchSpy, expectedPatchCalls)
-              const phones = Model.get(newModel, 'phone')
+              const phones = newModel.get('phone')
               expect(phones.length).toBe(3)
               // The new field should now be tracking its previously "new" state
               // as its "old" state in the .quad property.
@@ -280,7 +279,7 @@ describe('Model', () => {
                     : sourceConfig.defaultSources.unlisted
                 )
               )
-              expect(Model.diff(rdf, newModel)).toEqual({})
+              expect(newModel.diff(rdf)).toEqual({})
             })
         })
       })
@@ -289,11 +288,11 @@ describe('Model', () => {
     describe('after removing fields', () => {
       it('should patch the removed field\'s URI and return the updated model', () => {
         const {patchSpy, webClientSpy} = createSpies()
-        const removedPhone = Model.get(model, 'phone')[1]
-        const modelMinusField = Model.remove(model, removedPhone)
+        const removedPhone = model.get('phone')[1]
+        const modelMinusField = model.remove(removedPhone)
         const uri = sourceConfig.defaultSources.listed
-        return Model
-          .save(rdf, webClientSpy, modelMinusField)
+        return modelMinusField
+          .save(rdf, webClientSpy)
           .then(newModel => {
             expectWebCalls(webClientSpy, patchSpy, [
               [
@@ -302,9 +301,9 @@ describe('Model', () => {
                 []
               ]
             ])
-            const phones = Model.get(newModel, 'phone')
+            const phones = newModel.get('phone')
             expect(phones.length).toBe(1)
-            expect(Model.diff(rdf, newModel)).toEqual({})
+            expect(newModel.diff(rdf)).toEqual({})
           })
       })
     })
@@ -350,14 +349,14 @@ describe('Model', () => {
       testData.forEach(({fieldData, expectedPatchCalls}) => {
         it(`should patch the new and removed field URIs for a ${fieldData.listed ? 'listed' : 'unlisted'} field and update the model`, () => {
           const {patchSpy, webClientSpy} = createSpies()
-          const removedPhone = Model.get(model, 'phone')[1]
-          const updatedModel = Model.set(model, removedPhone, fieldData)
-          return Model
-            .save(rdf, webClientSpy, updatedModel)
+          const removedPhone = model.get('phone')[1]
+          const updatedModel = model.set(removedPhone, fieldData)
+          return updatedModel
+            .save(rdf, webClientSpy)
             .then(newModel => {
               expectWebCalls(webClientSpy, patchSpy, expectedPatchCalls)
-              expect(Model.get(newModel, 'phone').length).toBe(2)
-              expect(Model.diff(rdf, newModel)).toEqual({})
+              expect(newModel.get('phone').length).toBe(2)
+              expect(newModel.diff(rdf)).toEqual({})
             })
         })
       })
@@ -368,8 +367,8 @@ describe('Model', () => {
         const listedURI = sourceConfig.defaultSources.listed
         const unlistedURI = sourceConfig.defaultSources.unlisted
         const {patchSpy, webClientSpy} = createSpies({failPatchFor: unlistedURI})
-        let newModel = Model.add(model, 'phone', phone('tel:000-000-0000', {listed: true}))
-        newModel = Model.add(newModel, 'phone', phone('tel:111-111-1111', {listed: false}))
+        let newModel = model.add('phone', phone('tel:000-000-0000', {listed: true}))
+        newModel = newModel.add('phone', phone('tel:111-111-1111', {listed: false}))
         const expectedPatchCalls = [
           [
             listedURI,
@@ -382,17 +381,17 @@ describe('Model', () => {
             [`<${webId}> ${vocab.foaf('phone')} "tel:111-111-1111" .`]
           ]
         ]
-        return Model
-          .save(rdf, webClientSpy, newModel)
+        return newModel
+          .save(rdf, webClientSpy)
           .catch(err => {
             const updatedModel = err.model
             expectWebCalls(webClientSpy, patchSpy, expectedPatchCalls)
-            const addedPhone = Model.get(updatedModel, 'phone')[2]
+            const addedPhone = updatedModel.get('phone')[2]
             expect(addedPhone.value).toBe('tel:000-000-0000')
             expect(Field.originalQuad(rdf, subject, addedPhone).toString()).toBe(
               `<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`
             )
-            const phoneNotPatched = Model.get(updatedModel, 'phone')[3]
+            const phoneNotPatched = updatedModel.get('phone')[3]
             expect(phoneNotPatched.value).toBe('tel:111-111-1111')
             expect(Field.originalQuad(rdf, subject, phoneNotPatched)).toBe(null)
           })
