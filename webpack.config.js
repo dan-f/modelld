@@ -5,7 +5,9 @@ module.exports = {
   output: {
     path: path.join(__dirname, 'dist'),
     publicPath: '/dist/',
-    filename: 'modelld.min.js'
+    filename: 'modelld.min.js',
+    library: 'Modelld',
+    libraryTarget: 'umd'
   },
   module: {
     loaders: [
