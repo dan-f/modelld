@@ -274,6 +274,7 @@ export function save (rdf, web, model) {
         return updatedModel
       } else {
         // TODO: extract error type
+        // TODO: list which patches failed
         const err = Error('Not all patches succeeded')
         err.model = updatedModel
         throw err

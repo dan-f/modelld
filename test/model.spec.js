@@ -188,8 +188,12 @@ describe('Model', () => {
   })
 
   describe('saving', () => {
-    const createSpies = () => {
-      const patchSpy = spy((uri, toDel, toIns) => Promise.resolve({url: uri}))
+    const createSpies = ({failPatchFor = null} = {}) => {
+      const patchSpy = spy((url, toDel, toIns) => {
+        return failPatchFor === url
+          ? Promise.reject({url})
+          : Promise.resolve({url})
+      })
       const webClientSpy = spy(rdf => ({patch: patchSpy}))
       return {patchSpy, webClientSpy}
     }
@@ -360,6 +364,40 @@ describe('Model', () => {
               expect(Model.diff(rdf, newModel)).toEqual({})
             })
         })
+      })
+    })
+
+    describe('after a failed patch', () => {
+      it.only('should return a model with updated fields for only those which were successfully updated', () => {
+        const listedURI = sourceConfig.defaultSources.listed
+        const unlistedURI = sourceConfig.defaultSources.unlisted
+        const {patchSpy, webClientSpy} = createSpies({failPatchFor: unlistedURI})
+        let newModel = Model.add(model, 'phone', phone('tel:000-000-0000', {listed: true}))
+        newModel = Model.add(newModel, 'phone', phone('tel:111-111-1111', {listed: false}))
+        const expectedPatchCalls = [
+          [
+            listedURI,
+            [],
+            [`<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`]
+          ],
+          [
+            unlistedURI,
+            [],
+            [`<${webId}> ${vocab.foaf('phone')} "tel:111-111-1111" .`]
+          ],
+        ]
+        return Model
+          .save(rdf, webClientSpy, newModel)
+          .catch(err => {
+            const updatedModel = err.model
+            expectWebCalls(webClientSpy, patchSpy, expectedPatchCalls)
+            const addedPhone = Model.get(updatedModel, 'phone')[2]
+            const phoneNotPatched = Model.get(updatedModel, 'phone')[3]
+            expect(Field.originalQuad(rdf, subject, addedPhone).toString()).toBe(
+              `<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`
+            )
+            expect(Field.originalQuad(rdf, subject, phoneNotPatched)).toBe(null)
+          })
       })
     })
   })
