@@ -94,21 +94,46 @@ export function add (model, key, field) {
  * Remove a field from a model.
  *
  * @param {Model} model - the model.
- * @param {String} key - the key of the fields to remove from.
  * @param {Field} field - the field to remove.
  * @returns {Model} - the updated model.
  */
-export function remove (model, key, field) {
-  if (get(model, key).filter(f => f.id === field.id).length === 0) {
+export function remove (model, field) {
+  if (!find(f => f.id === field.id, model)) {
     return model
   }
+  return filterToGraveyard(f => f.id !== field.id, model)
+}
+
+function find (fn, model) {
+  return model.fields
+    .reduce((fields, curFieldsArray) => [...fields, ...curFieldsArray])
+    .find(field => fn(field))
+}
+
+/**
+ * Filter fields from a model, moving them to the graveyard if they don't pass a
+ * predicate function.
+ *
+ * @param {Function(Field)} fn - A predicate function returning a Boolean to
+ * apply to every field in the model.  Fields which pass the predicate stay in
+ * the model, and those which fail the test are removed.
+ * @param {Model} model - the model.
+ * @returns {Model} A new model with some fields filtered into the graveyard.
+ */
+function filterToGraveyard (fn, model) {
+  const removedFields = []
+  const newFields = model.fields
+    .map(fieldsArray => fieldsArray.filter(field => {
+      const testPassed = fn(field)
+      if (!testPassed) {
+        removedFields.push(field)
+      }
+      return testPassed
+    }))
   return createModel(
     model.subject,
-    model.fields.set(
-      key,
-      model.fields.get(key).filter(f => field.id !== f.id)
-    ),
-    [...model.graveyard, field]
+    newFields,
+    [...model.graveyard, ...removedFields]
   )
 }
 

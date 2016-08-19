@@ -94,13 +94,13 @@ describe('Model', () => {
   it('can remove existing fields', () => {
     const firstPhone = Model.get(model, 'phone')[0]
     const secondPhone = Model.get(model, 'phone')[1]
-    const updatedModel = Model.remove(model, 'phone', firstPhone)
+    const updatedModel = Model.remove(model, firstPhone)
     expect(Model.get(updatedModel, 'phone')).toEqual([secondPhone])
   })
 
   it('can not remove fields which do not belong to the model', () => {
     const notOwnedPhone = phone('tel:444-444-4444')
-    expect(Model.remove(model, 'phone', notOwnedPhone)).toEqual(model)
+    expect(Model.remove(model, notOwnedPhone)).toEqual(model)
   })
 
   it('can change the value of contained fields', () => {
@@ -148,7 +148,7 @@ describe('Model', () => {
       it('shows that a field should be removed from the graph', () => {
         const listedURI = sourceConfig.defaultSources.listed
         const removedPhone = Model.get(model, 'phone')[1]
-        const updatedModel = Model.remove(model, 'phone', removedPhone)
+        const updatedModel = Model.remove(model, removedPhone)
         const expectedDiff = {}
         expectedDiff[listedURI] = {}
         expectedDiff[listedURI].toDel = [
@@ -290,9 +290,7 @@ describe('Model', () => {
       it('should patch the removed field\'s URI and return the updated model', () => {
         const {patchSpy, webClientSpy} = createSpies()
         const removedPhone = Model.get(model, 'phone')[1]
-        const modelMinusField = Model.remove(
-          model, 'phone', removedPhone
-        )
+        const modelMinusField = Model.remove(model, removedPhone)
         const uri = sourceConfig.defaultSources.listed
         return Model
           .save(rdf, webClientSpy, modelMinusField)
