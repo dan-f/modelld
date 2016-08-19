@@ -18,7 +18,7 @@
     "coverage:coveralls": "nyc report --reporter=text-lcov | coveralls",
     "lint": "standard src/**.js test/**.js",
     "preversion": "npm run lint && npm test",
-    "prepublish": "npm run build",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -28,7 +28,8 @@
     "linkeddata",
     "rdf",
     "semantic",
-    "web"
+    "web",
+    "solid"
   ],
   "author": "Daniel Friedman",
   "license": "MIT",
