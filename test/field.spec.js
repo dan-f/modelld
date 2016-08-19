@@ -3,7 +3,7 @@ import expect from 'expect'
 import rdf from 'rdflib'
 import solidNs from 'solid-namespace'
 
-import * as Field from '../src/field'
+import { fieldFactory } from '../src/field'
 
 const vocab = solidNs(rdf)
 
@@ -22,7 +22,7 @@ describe('Field', () => {
     defaultSources,
     sourceIndex
   }
-  const factory = Field.fieldFactory(sourceConfig)
+  const factory = fieldFactory(sourceConfig)
   const name = factory(vocab.foaf('name'))
 
   it('has a value', () => {
@@ -71,7 +71,7 @@ describe('Field', () => {
   it('can update its value', () => {
     const firstName = name('dan')
     expect(firstName.value).toEqual('dan')
-    expect(Field.set(firstName, {value: 'dmitri'}).value).toEqual('dmitri')
+    expect(firstName.set({value: 'dmitri'}).value).toEqual('dmitri')
   })
 
   it('cannot directly mutate its value', () => {
@@ -82,7 +82,7 @@ describe('Field', () => {
   it('can update its listed value', () => {
     const firstName = name('dan')
     expect(firstName.listed).toBe(false)
-    expect(Field.set(firstName, {listed: true}).listed).toBe(true)
+    expect(firstName.set({listed: true}).listed).toBe(true)
   })
 
   it('cannot directly mutate its listed value', () => {
@@ -92,8 +92,8 @@ describe('Field', () => {
 
   it('can toggle its listed value', () => {
     const firstName = name('dan', {listed: true})
-    const privateFirstName = Field.toggleListed(firstName)
-    const publicFirstName = Field.toggleListed(privateFirstName)
+    const privateFirstName = firstName.toggleListed()
+    const publicFirstName = privateFirstName.toggleListed()
     expect(privateFirstName.listed).toBe(false)
     expect(publicFirstName.listed).toBe(true)
   })
@@ -106,8 +106,8 @@ describe('Field', () => {
       rdf.sym(defaultSources.listed)
     )
     const field = name.fromQuad(quad)
-    const updatedField = Field.set(field, {value: 'bob', listed: false})
-    const fieldTrackingCurrentState = Field.fromCurrentState(rdf, quad.subject, updatedField)
+    const updatedField = field.set({value: 'bob', listed: false})
+    const fieldTrackingCurrentState = updatedField.fromCurrentState(rdf, quad.subject)
     expect(fieldTrackingCurrentState.originalObject).toEqual(
       rdf.Literal.fromValue('bob')
     )
@@ -124,7 +124,7 @@ describe('Field', () => {
         rdf.Literal.fromValue('dan'),
         rdf.sym(defaultSources.listed)
       )
-      expect(Field.originalQuad(rdf, quad.subject, name.fromQuad(quad))).toEqual(quad)
+      expect(name.fromQuad(quad).originalQuad(rdf, quad.subject)).toEqual(quad)
     })
 
     it('returns a quad with no graph URI for quads without a source', () => {
@@ -133,7 +133,7 @@ describe('Field', () => {
         vocab.foaf('name'),
         rdf.Literal.fromValue('dan')
       )
-      expect(Field.originalQuad(rdf, quad.subject, name.fromQuad(quad))).toEqual(
+      expect(name.fromQuad(quad).originalQuad(rdf, quad.subject)).toEqual(
         rdf.quad(
           rdf.sym('#me'),
           vocab.foaf('name'),
@@ -143,7 +143,7 @@ describe('Field', () => {
     })
 
     it('returns null for fields which do not track an original quad', () => {
-      expect(Field.originalQuad(rdf, rdf.sym('#me'), name('dan'))).toBe(null)
+      expect(name('dan').originalQuad(rdf, rdf.sym('#me'))).toBe(null)
     })
   })
 
@@ -155,11 +155,11 @@ describe('Field', () => {
         rdf.Literal.fromValue('dan'),
         rdf.sym(defaultSources.listed)
       )
-      expect(Field.toQuad(rdf, quad.subject, name.fromQuad(quad))).toEqual(quad)
+      expect(name.fromQuad(quad).toQuad(rdf, quad.subject)).toEqual(quad)
     })
 
     it('returns appropriate subject, predicate, value, and graph for value-constructed fields', () => {
-      expect(Field.toQuad(rdf, rdf.sym('#me'), name('dan', {listed: true})))
+      expect(name('dan', {listed: true}).toQuad(rdf, rdf.sym('#me')))
         .toEqual(
           rdf.quad(
             rdf.sym('#me'),
@@ -168,7 +168,7 @@ describe('Field', () => {
             rdf.sym(defaultSources.listed)
           )
         )
-      expect(Field.toQuad(rdf, rdf.sym('#me'), name('dan', {listed: false})))
+      expect(name('dan', {listed: false}).toQuad(rdf, rdf.sym('#me')))
         .toEqual(
           rdf.quad(
             rdf.sym('#me'),
@@ -194,19 +194,19 @@ describe('Field', () => {
         originalResource
       )
       const firstName = name.fromQuad(quad)
-      const listedFirstName = Field.toggleListed(firstName)
-      const unlistedFirstName = Field.toggleListed(listedFirstName)
+      const listedFirstName = firstName.toggleListed()
+      const unlistedFirstName = listedFirstName.toggleListed()
       expect(firstName.listed).toBe(false)
       // Expect the initial non-default unlisted graph
-      expect(Field.toQuad(rdf, quad.subject, firstName).graph)
+      expect(firstName.toQuad(rdf, quad.subject).graph)
         .toEqual(quad.graph)
       expect(listedFirstName.listed).toBe(true)
       // Expect the default listed graph
-      expect(Field.toQuad(rdf, quad.subject, listedFirstName).graph)
+      expect(listedFirstName.toQuad(rdf, quad.subject).graph)
         .toEqual(rdf.sym(defaultSources.listed))
       expect(unlistedFirstName.listed).toBe(false)
       // Expect the initial non-default unlisted graph
-      expect(Field.toQuad(rdf, quad.subject, unlistedFirstName).graph)
+      expect(unlistedFirstName.toQuad(rdf, quad.subject).graph)
         .toEqual(quad.graph)
     })
   })

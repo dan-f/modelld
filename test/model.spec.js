@@ -4,8 +4,8 @@ import rdf from 'rdflib'
 import { spy } from 'sinon'
 import solidNs from 'solid-namespace'
 
-import * as Field from '../src/field'
-import * as Model from '../src/model'
+import { fieldFactory } from '../src/field'
+import { modelFactory } from '../src/model'
 
 const vocab = solidNs(rdf)
 
@@ -60,10 +60,10 @@ describe('Model', () => {
     const graph = rdf.graph()
     rdf.parse(profile, graph, profileURI, 'text/turtle')
 
-    const field = Field.fieldFactory(sourceConfig)
+    const field = fieldFactory(sourceConfig)
     name = field(vocab.foaf('name'))
     phone = field(vocab.foaf('phone'))
-    const profileModel = Model.modelFactory(rdf, {
+    const profileModel = modelFactory(rdf, {
       name,
       phone
     })
@@ -138,7 +138,7 @@ describe('Model', () => {
           expectedDiff[uri] = {}
           expectedDiff[uri].toDel = []
           expectedDiff[uri].toIns = [
-            Field.toQuad(rdf, subject, newPhone).toString()
+            newPhone.toQuad(rdf, subject).toString()
           ]
           expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
         })
@@ -153,7 +153,7 @@ describe('Model', () => {
         const expectedDiff = {}
         expectedDiff[listedURI] = {}
         expectedDiff[listedURI].toDel = [
-          Field.toQuad(rdf, subject, removedPhone).toString()
+          removedPhone.toQuad(rdf, subject).toString()
         ]
         expectedDiff[listedURI].toIns = []
         expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
@@ -297,7 +297,7 @@ describe('Model', () => {
             expectWebCalls(webClientSpy, patchSpy, [
               [
                 uri,
-                [Field.toQuad(rdf, subject, removedPhone).toString()],
+                [removedPhone.toQuad(rdf, subject).toString()],
                 []
               ]
             ])
@@ -388,12 +388,12 @@ describe('Model', () => {
             expectWebCalls(webClientSpy, patchSpy, expectedPatchCalls)
             const addedPhone = updatedModel.get('phone')[2]
             expect(addedPhone.value).toBe('tel:000-000-0000')
-            expect(Field.originalQuad(rdf, subject, addedPhone).toString()).toBe(
+            expect(addedPhone.originalQuad(rdf, subject).toString()).toBe(
               `<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`
             )
             const phoneNotPatched = updatedModel.get('phone')[3]
             expect(phoneNotPatched.value).toBe('tel:111-111-1111')
-            expect(Field.originalQuad(rdf, subject, phoneNotPatched)).toBe(null)
+            expect(phoneNotPatched.originalQuad(rdf, subject)).toBe(null)
           })
       })
     })

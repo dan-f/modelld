@@ -1,6 +1,5 @@
 import Immutable from 'immutable'
 
-import * as Field from './field'
 import { isDefined } from './util'
 
 /**
@@ -113,7 +112,7 @@ class Model {
    */
   set (oldField, newFieldArgs) {
     return this.map(field => {
-      return field.id === oldField.id ? Field.set(field, newFieldArgs) : field
+      return field.id === oldField.id ? field.set(newFieldArgs) : field
     })
   }
   /**
@@ -142,9 +141,9 @@ class Model {
       .reduce((reduction, cur) => [...reduction, ...cur])
       .reduce((previousMap, field) => {
         const map = Object.assign({}, previousMap)
-        const newQuad = Field.toQuad(rdf, this.subject, field)
+        const newQuad = field.toQuad(rdf, this.subject)
         const newSourceURI = newQuad.graph.value
-        const originalQuad = Field.originalQuad(rdf, this.subject, field)
+        const originalQuad = field.originalQuad(rdf, this.subject)
         const originalSourceURI = originalQuad
           ? originalQuad.graph.value
           : null
@@ -167,7 +166,7 @@ class Model {
       }, {})
 
     this.graveyard.forEach((field) => {
-      const quad = Field.originalQuad(rdf, this.subject, field)
+      const quad = field.originalQuad(rdf, this.subject)
       if (quad) {
         const uri = quad.graph.uri
         if (!isDefined(diffMap[uri])) {
@@ -197,8 +196,8 @@ class Model {
     return patchURIs(rdf, web, diffMap)
       .then(patchedURIs => {
         const updatedModel = this.map(
-          field => patchedURIs.has(Field.getCurrentSource(rdf, field).value)
-            ? Field.fromCurrentState(rdf, this.subject, field)
+          field => patchedURIs.has(field.getCurrentSource(rdf).value)
+            ? field.fromCurrentState(rdf, this.subject)
             : field
         ).clearGraveyard()
         const allPatchesSucceded = patchedURIs.size === urisToPatch.length
