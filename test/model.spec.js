@@ -368,7 +368,7 @@ describe('Model', () => {
     })
 
     describe('after a failed patch', () => {
-      it.only('should return a model with updated fields for only those which were successfully updated', () => {
+      it('should return a model with updated fields for only those which were successfully updated', () => {
         const listedURI = sourceConfig.defaultSources.listed
         const unlistedURI = sourceConfig.defaultSources.unlisted
         const {patchSpy, webClientSpy} = createSpies({failPatchFor: unlistedURI})
@@ -384,7 +384,7 @@ describe('Model', () => {
             unlistedURI,
             [],
             [`<${webId}> ${vocab.foaf('phone')} "tel:111-111-1111" .`]
-          ],
+          ]
         ]
         return Model
           .save(rdf, webClientSpy, newModel)
