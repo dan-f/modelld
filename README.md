@@ -1,4 +1,4 @@
-# ld-lens
+# modelld
 [![Build Status](https://travis-ci.org/dan-f/modelld.svg)](https://travis-ci.org/dan-f/modelld)
 [![Coverage Status](https://coveralls.io/repos/github/dan-f/modelld/badge.svg?branch=master)](https://coveralls.io/github/dan-f/modelld?branch=master)
 
@@ -21,7 +21,7 @@ an ORM but for linked data.
 
 ## Roadmap
 
-`ld-lens` is a work in progress.  Don't depend on it for anything.
+`modelld` is a work in progress.  Don't depend on it for anything.
 
 Here are the things that I'm either actively working on, or that should be
 worked on in the near future:
