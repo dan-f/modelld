@@ -1,4 +1,5 @@
 # modelld
+[![NPM Version](https://img.shields.io/npm/v/modelld.svg?style=flat)](https://npm.im/modelld)
 [![Build Status](https://travis-ci.org/dan-f/modelld.svg)](https://travis-ci.org/dan-f/modelld)
 [![Coverage Status](https://coveralls.io/repos/github/dan-f/modelld/badge.svg?branch=master)](https://coveralls.io/github/dan-f/modelld?branch=master)
 
