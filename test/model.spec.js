@@ -189,20 +189,17 @@ describe('Model', () => {
   })
 
   describe('saving', () => {
-    const createSpies = ({failPatchFor = null} = {}) => {
+    const createFakeWebClient = ({failPatchFor = null} = {}) => {
       const patchSpy = spy((url, toDel, toIns) => {
         return failPatchFor === url
           ? Promise.reject({url})
           : Promise.resolve({url})
       })
-      const webClientSpy = spy(rdf => ({patch: patchSpy}))
-      return {patchSpy, webClientSpy}
+      const webClient = {patch: patchSpy}
+      return {patchSpy, webClient}
     }
 
-    const expectWebCalls = (webClientSpy, patchSpy, patchCalls) => {
-      // Expect that the web client was initialized with the rdf library
-      expect(webClientSpy.callCount).toBe(1)
-      expect(webClientSpy.calledWith(rdf)).toBe(true)
+    const expectWebCalls = (webClient, patchSpy, patchCalls) => {
       // Expect that the web client's patch method was properly called
       expect(patchSpy.callCount).toBe(patchCalls.length)
       patchCalls.forEach(call => {
@@ -212,11 +209,10 @@ describe('Model', () => {
 
     describe('for unchanged models', () => {
       it('should return the current model', () => {
-        const {patchSpy, webClientSpy} = createSpies()
+        const {patchSpy, webClient} = createFakeWebClient()
         return model
-          .save(rdf, webClientSpy)
+          .save(rdf, webClient)
           .then(updatedModel => {
-            expect(webClientSpy.called).toBe(false)
             expect(patchSpy.called).toBe(false)
             expect(updatedModel).toEqual(model)
           })
@@ -258,13 +254,13 @@ describe('Model', () => {
       ]
       testData.forEach(({fieldData, expectedPatchCalls}) => {
         it(`should patch the new field's URI for a ${fieldData.listed ? 'listed' : 'unlisted'} field and return the updated model`, () => {
-          const {patchSpy, webClientSpy} = createSpies()
+          const {patchSpy, webClient} = createFakeWebClient()
           const newPhone = phone(fieldData.value, {listed: fieldData.listed})
           const modelPlusField = model.add('phone', newPhone)
           return modelPlusField
-            .save(rdf, webClientSpy)
+            .save(rdf, webClient)
             .then(newModel => {
-              expectWebCalls(webClientSpy, patchSpy, expectedPatchCalls)
+              expectWebCalls(webClient, patchSpy, expectedPatchCalls)
               const phones = newModel.get('phone')
               expect(phones.length).toBe(3)
               // The new field should now be tracking its previously "new" state
@@ -287,14 +283,14 @@ describe('Model', () => {
 
     describe('after removing fields', () => {
       it('should patch the removed field\'s URI and return the updated model', () => {
-        const {patchSpy, webClientSpy} = createSpies()
+        const {patchSpy, webClient} = createFakeWebClient()
         const removedPhone = model.get('phone')[1]
         const modelMinusField = model.remove(removedPhone)
         const uri = sourceConfig.defaultSources.listed
         return modelMinusField
-          .save(rdf, webClientSpy)
+          .save(rdf, webClient)
           .then(newModel => {
-            expectWebCalls(webClientSpy, patchSpy, [
+            expectWebCalls(webClient, patchSpy, [
               [
                 uri,
                 [removedPhone.toQuad(rdf, subject).toString()],
@@ -348,13 +344,13 @@ describe('Model', () => {
       ]
       testData.forEach(({fieldData, expectedPatchCalls}) => {
         it(`should patch the new and removed field URIs for a ${fieldData.listed ? 'listed' : 'unlisted'} field and update the model`, () => {
-          const {patchSpy, webClientSpy} = createSpies()
+          const {patchSpy, webClient} = createFakeWebClient()
           const removedPhone = model.get('phone')[1]
           const updatedModel = model.set(removedPhone, fieldData)
           return updatedModel
-            .save(rdf, webClientSpy)
+            .save(rdf, webClient)
             .then(newModel => {
-              expectWebCalls(webClientSpy, patchSpy, expectedPatchCalls)
+              expectWebCalls(webClient, patchSpy, expectedPatchCalls)
               expect(newModel.get('phone').length).toBe(2)
               expect(newModel.diff(rdf)).toEqual({})
             })
@@ -366,7 +362,7 @@ describe('Model', () => {
       it('should return a model with updated fields for only those which were successfully updated', () => {
         const listedURI = sourceConfig.defaultSources.listed
         const unlistedURI = sourceConfig.defaultSources.unlisted
-        const {patchSpy, webClientSpy} = createSpies({failPatchFor: unlistedURI})
+        const {patchSpy, webClient} = createFakeWebClient({failPatchFor: unlistedURI})
         let newModel = model.add('phone', phone('tel:000-000-0000', {listed: true}))
         newModel = newModel.add('phone', phone('tel:111-111-1111', {listed: false}))
         const expectedPatchCalls = [
@@ -382,10 +378,10 @@ describe('Model', () => {
           ]
         ]
         return newModel
-          .save(rdf, webClientSpy)
+          .save(rdf, webClient)
           .catch(err => {
             const updatedModel = err.model
-            expectWebCalls(webClientSpy, patchSpy, expectedPatchCalls)
+            expectWebCalls(webClient, patchSpy, expectedPatchCalls)
             const addedPhone = updatedModel.get('phone')[2]
             expect(addedPhone.value).toBe('tel:000-000-0000')
             expect(addedPhone.originalQuad(rdf, subject).toString()).toBe(

@@ -297,11 +297,10 @@ export class Model {
  * URIs for which the patches succeeded.
  */
 function patchURIs (rdf, web, diffMap) {
-  const webClient = web(rdf)
   const urisToPatch = Object.keys(diffMap)
   return Promise.all(
     urisToPatch.map(uri => {
-      return webClient
+      return web
         .patch(uri, diffMap[uri].toDel, diffMap[uri].toIns)
         .then(solidResponse => ({URI: solidResponse.url, succeeded: true}))
         .catch(solidResponse => ({URI: solidResponse.url, succeeded: false}))
