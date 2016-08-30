@@ -10,7 +10,7 @@ import { isDefined } from './util'
  * @typedef {Object} Model
  * @property {Object} subject - The subject of the model represented as an RDF
  * NamedNode.
- * @property {Immutable.Map<String, Field[]>} fields - The fields of this model
+ * @property {Immutable.Map<String, Field[]>} _fields - The fields of this model
  * keyed by the field keys, which are user-specified aliases for RDF predicates.
  * @property {Array[Object]} graveyard - An array of RDF quads which have been
  * removed from the model.
@@ -59,7 +59,7 @@ export class Model {
    */
   constructor (subject, fields, graveyard = []) {
     this.subject = subject
-    this.fields = fields
+    this._fields = fields
     this.graveyard = graveyard
     Object.freeze(this)
   }
@@ -70,8 +70,30 @@ export class Model {
    * @param {String} key - the key of the fields to look up.
    * @returns {Field[]} An array of fields for the given key.
    */
+  fields (key) {
+    return this._fields.get(key) || []
+  }
+
+  /**
+   * Get all the field values for a given key.
+   *
+   * @param {String} key - the key of the fields to look up.
+   * @returns {String[]} An array of field values for the given key.
+   */
   get (key) {
-    return this.fields.get(key) || []
+    return this.fields(key).map(field => field.value)
+  }
+
+  /**
+   * Get one of the field values for a given key.  This just looks for the first
+   * field value, but order isn't guaranteed.
+   *
+   * @param {String} key - the key of the field to look up.
+   * @returns {String|undefined} The field value for the given key, or undefined
+   * if none was found.
+   */
+  any (key) {
+    return this.fields(key).map(field => field.value)[0]
   }
 
   /**
@@ -84,7 +106,7 @@ export class Model {
   add (key, field) {
     return new Model(
       this.subject,
-      this.fields.set(key, [...this.fields.get(key), field])
+      this._fields.set(key, [...this._fields.get(key), field])
     )
   }
 
@@ -136,7 +158,7 @@ export class Model {
    *   }
    */
   diff (rdf) {
-    const diffMap = this.fields
+    const diffMap = this._fields
       .toArray()
       .reduce((reduction, cur) => [...reduction, ...cur])
       .reduce((previousMap, field) => {
@@ -225,7 +247,7 @@ export class Model {
   map (fn) {
     return new Model(
       this.subject,
-      this.fields.map(fieldsArray => fieldsArray.map(fn)),
+      this._fields.map(fieldsArray => fieldsArray.map(fn)),
       this.graveyard
     )
   }
@@ -239,7 +261,7 @@ export class Model {
    * @returns {Field} - The identified field.
    */
   find (fn) {
-    return this.fields
+    return this._fields
       .reduce((fields, curFieldsArray) => [...fields, ...curFieldsArray])
       .find(field => fn(field))
   }
@@ -255,7 +277,7 @@ export class Model {
    */
   filterToGraveyard (fn) {
     const removedFields = []
-    const newFields = this.fields
+    const newFields = this._fields
       .map(fieldsArray => fieldsArray.filter(field => {
         const testPassed = fn(field)
         if (!testPassed) {
@@ -278,7 +300,7 @@ export class Model {
   clearGraveyard () {
     return new Model(
       this.subject,
-      this.fields,
+      this._fields,
       []
     )
   }
