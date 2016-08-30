@@ -390,6 +390,9 @@ describe('Model', () => {
             const phoneNotPatched = updatedModel.get('phone')[3]
             expect(phoneNotPatched.value).toBe('tel:111-111-1111')
             expect(phoneNotPatched.originalQuad(rdf, subject)).toBe(null)
+            // Verify useful data was properly stored on the error
+            expect(err.diffMap).toEqual(newModel.diff(rdf))
+            expect(err.failedURIs).toEqual(new Set([unlistedURI]))
           })
       })
     })

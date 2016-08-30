@@ -204,10 +204,10 @@ export class Model {
         if (allPatchesSucceded) {
           return updatedModel
         } else {
-          // TODO: extract error type
-          // TODO: list which patches failed
-          const err = Error('Not all patches succeeded')
+          const err = new Error('Not all patches succeeded')
           err.model = updatedModel
+          err.diffMap = diffMap
+          err.failedURIs = new Set(urisToPatch.filter(uri => !patchedURIs.has(uri)))
           throw err
         }
       })
