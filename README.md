@@ -91,19 +91,26 @@ profile
   .get('name') // => []
 
 // Update a field's value
+const name = profile.get('name')[0]
 profile
-  .set('name', {value: 'Daniel'})
+  .set(name, {value: 'Daniel'})
   .get('name') => [Field('Daniel')]
 
 // Save a model back to the LDP server(s) it came from
 // (Assume 'web' is the LDP web client, currently assumed to be https://github.com/solid/solid-web-client)
+const name = profile.get('name')[0]
 profile
-  .set('name', {value: 'Daniel'})
+  .set(name, {value: 'Daniel'})
   .add('phone', phone('tel:123-456-7890'))
   .save(rdf, web)
   .then(newModel => {
     console.log(newModel.get('name'))
     console.log(newModel.get('phone'))
+  })
+  .catch(err => {
+    // err.model is the model including all the updates which worked
+    // err.diffMap describes the RDF statements which should have been inserted and removed from the server
+    // err.failedURIs describes the URIs for which the PATCH requests failed
   })
 ```
 
