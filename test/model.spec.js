@@ -132,6 +132,26 @@ describe('Model', () => {
       })
     })
 
+    describe('after adding quad-constructed fields', () => {
+      const testData = [
+        ['familiar (listed)', sourceConfig.defaultSources.listed],
+        ['familiar (unlisted)', sourceConfig.defaultSources.unlisted],
+        ['unfamiliar', 'https://unknown-server.com/resource']
+      ]
+      testData.forEach(([type, source]) => {
+        it(`does not add ${type} fields to the diff`, () => {
+          const phoneQuad = rdf.quad(
+            rdf.sym(webId),
+            vocab.foaf('phone'),
+            rdf.Literal.fromValue('tel:444-444-4444'),
+            rdf.sym(source)
+          )
+          expect(model.add('phone', phone.fromQuad(phoneQuad)).diff(rdf))
+            .toEqual({})
+        })
+      })
+    })
+
     describe('after adding fields', () => {
       const testData = [
         {value: 'tel:000-000-0000', listed: true},
