@@ -144,9 +144,12 @@ export class Field {
    */
   getCurrentSource (rdf) {
     const { defaultSources, sourceIndex } = this._sourceConfig
+    // unfamiliar URIs (those not in the source config) are considered unlisted
+    const uriIsListed = uri => sourceIndex[uri] || false
+
     let sourceURI
     if (isDefined(this.originalSource) &&
-        this.listed === sourceIndex[this.originalSource.value]) {
+        this.listed === uriIsListed(this.originalSource.value)) {
       sourceURI = this.originalSource.value
     } else {
       sourceURI = this.listed ? defaultSources.listed : defaultSources.unlisted

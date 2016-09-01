@@ -170,6 +170,18 @@ describe('Field', () => {
   })
 
   describe('toQuad', () => {
+    describe('for unfamiliar sources', () => {
+      it('returns the original quad for a quad-constructed field', () => {
+        const quad = rdf.quad(
+          rdf.sym('#me'),
+          vocab.foaf('name'),
+          rdf.Literal.fromValue('dan'),
+          rdf.sym('https://unknown-server.com/resource')
+        )
+        expect(name.fromQuad(quad).toQuad(rdf, quad.subject)).toEqual(quad)
+      })
+    })
+
     it('returns the original quad for a quad-constructed field', () => {
       const quad = rdf.quad(
         rdf.sym('#me'),
