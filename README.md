@@ -74,31 +74,35 @@ const webId = 'https://me.databox.me/profile/card#me'
 const profile = profileModel(graph, webId)
 
 // Get the value of some fields
-profile.get('name') // => [Field('Some Name')]
-profile.get('picture') // => [Field('http://.../pic.png')]
-profile.get('phone') // => [Field('tel:000-000-0000'), Field('tel:111-111-1111')]
+profile.any('phone') // => 'tel:000-000-0000'
+profile.get('phone') // => ['tel:000-000-0000', 'tel:111-111-1111']
+profile.fields('phone') // => [Field('tel:000-000-0000'), Field('tel:111-111-1111')]
+// Undeclared fields don't show up
+profile.any('undeclared-field') // => undefined
 profile.get('undeclared-field') // => []
+profile.fields('undeclared-field') // => []
 
 // Add a field.  Models are immutable, so adding/setting/removing fields always
 // returns a new model.
 const newProfile = profile.add('phone', phone('tel:123-456-7890'))
-newProfile.get('phone') // => [Field('tel:000-000-0000'), Field('tel:111-111-1111'), Field('tel:123-456-7890')))]
+profile.get('phone') // => ['tel:000-000-0000', 'tel:111-111-1111']
+newProfile.get('phone') // => ['tel:000-000-0000', 'tel:111-111-1111', 'tel:123-456-7890']
 
 // Remove a field
-const myName = profile.get('name')[0]
+const myName = profile.fields('name')[0]
 profile
   .remove(myName)
-  .get('name') // => []
+  .any('name') // => undefined
 
 // Update a field's value
-const name = profile.get('name')[0]
+const name = profile.fields('name')[0]
 profile
   .set(name, {value: 'Daniel'})
-  .get('name') => [Field('Daniel')]
+  .any('name') // => 'Daniel'
 
 // Save a model back to the LDP server(s) it came from
 // (Assume 'web' is the LDP web client, currently assumed to be https://github.com/solid/solid-web-client)
-const name = profile.get('name')[0]
+const name = profile.fields('name')[0]
 profile
   .set(name, {value: 'Daniel'})
   .add('phone', phone('tel:123-456-7890'))
