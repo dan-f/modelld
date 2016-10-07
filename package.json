@@ -1,6 +1,6 @@
 {
   "name": "modelld",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "A JavaScript API for selecting and manipulating linked data subgraphs",
   "main": "lib/index.js",
   "files": [
