@@ -1,6 +1,6 @@
 # modelld
 [![NPM Version](https://img.shields.io/npm/v/modelld.svg?style=flat)](https://npm.im/modelld)
-[![Build Status](https://travis-ci.org/dan-f/modelld.svg)](https://travis-ci.org/dan-f/modelld)
+[![Build Status](https://travis-ci.org/dan-f/modelld.svg?branch=master)](https://travis-ci.org/dan-f/modelld)
 [![Coverage Status](https://coveralls.io/repos/github/dan-f/modelld/badge.svg?branch=master)](https://coveralls.io/github/dan-f/modelld?branch=master)
 
 A JavaScript API for selecting and manipulating subgraphs of linked data.
@@ -38,7 +38,8 @@ Here's how you might use `modelld` to model part of a
 [Solid user profile](https://github.com/solid/solid-spec/blob/master/solid-webid-profiles.md):
 
 ```javascript
-import { fieldFactory, modelFactory } from 'modelld'
+import { modelFactory } from 'modelld'
+import { vocab, rdflib, web } from 'solid-client'
 
 // Describes the default 'listed' (public) and 'unlisted' (private) URIs for the
 // model as well as which URIs (default and non-default) are considered
@@ -56,17 +57,10 @@ const sourceConfig = {
   }
 }
 
-const field = fieldFactory(sourceConfig)
-const name = field('http://xmlns.com/foaf/0.1/name')
-const picture = field('http://xmlns.com/foaf/0.1/img')
-const phone = field('http://xmlns.com/foaf/0.1/phone')
-
-
-// Suppose you've got an RDF lib named 'rdf'
-const profileModel = modelFactory(rdf, {
-  name,
-  picture,
-  phone
+const profileModel = modelFactory(rdflib, sourceConfig, {
+  name: vocab.foaf('name'),
+  picture: vocab.foaf('img'),
+  phone: vocab.foaf('phone')
 })
 
 const webId = 'https://me.databox.me/profile/card#me'
@@ -84,7 +78,7 @@ profile.fields('undeclared-field') // => []
 
 // Add a field.  Models are immutable, so adding/setting/removing fields always
 // returns a new model.
-const newProfile = profile.add('phone', phone('tel:123-456-7890'))
+const newProfile = profile.add('phone', 'tel:123-456-7890')
 profile.get('phone') // => ['tel:000-000-0000', 'tel:111-111-1111']
 newProfile.get('phone') // => ['tel:000-000-0000', 'tel:111-111-1111', 'tel:123-456-7890']
 
@@ -97,16 +91,15 @@ profile
 // Update a field's value
 const name = profile.fields('name')[0]
 profile
-  .set(name, {value: 'Daniel'})
+  .set(name, 'Daniel')
   .any('name') // => 'Daniel'
 
 // Save a model back to the LDP server(s) it came from
-// (Assume 'web' is the LDP web client, currently assumed to be https://github.com/solid/solid-web-client)
 const name = profile.fields('name')[0]
 profile
-  .set(name, {value: 'Daniel'})
-  .add('phone', phone('tel:123-456-7890'))
-  .save(rdf, web)
+  .set(name, 'Daniel')
+  .add('phone', 'tel:123-456-7890')
+  .save(rdflib, web)
   .then(newModel => {
     console.log(newModel.get('name'))
     console.log(newModel.get('phone'))

@@ -1,6 +1,7 @@
 import Immutable from 'immutable'
 
 import { isDefined } from './util'
+import { fieldFactory } from '../src/field'
 
 /**
  * A Model represents an RDF subgraph.  Specifically, it represents a number of
@@ -20,27 +21,48 @@ import { isDefined } from './util'
  * Generates a factory for creating models.
  *
  * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js.
+ * @param {Object} options.sourceConfig - A configuration object containing the
+ * default listed and unlisted source graphs, and a mapping of all source graphs
+ * to whether they're listed.
+ * @param {Object} options.sourceConfig.defaultSources - An object with two
+ * keys, 'listed', and 'unlisted', which each map to strings representing URIs
+ * for the default listed and unlisted graphs, respectively.
+ * @param {Object} options.sourceConfig.sourceIndex - An object whose keys are
+ * string URIs and whose values are booleans indicating whether or not those
+ * URIs are listed or unlisted.  true indicates listed, and false indicates
+ * unlisted.
+ * @param {Object} fieldMap - A mapping of predicate aliases to RDF predicate
+ * nodes. For example: { 'name': '<http://xmlns.com/foaf/0.1/name>' }
  * @param {Object} fieldCreators - A mapping from field keys to field factory
  * functions.
  * @returns {Function} - A factory function for creating actual models.  The
  * factory takes two arguments - an RDF graph object to parse and the subject of
  * the model as a string.
  */
-export function modelFactory (rdf, fieldCreators) {
+export function modelFactory (rdf, sourceConfig, fieldMap) {
+  const factory = fieldFactory(sourceConfig)
   return (graph, subjectStr) => {
+    const fieldCreators = {}
     const subject = rdf.namedNode(subjectStr)
     const fields = Immutable.Map(
-      Object.keys(fieldCreators).reduce((prevFields, fieldName) => {
-        const fieldCreator = fieldCreators[fieldName]
+      Object.keys(fieldMap).reduce((prevFields, fieldName) => {
+        const fieldPredicate = fieldMap[fieldName]
         const matchingQuads = graph
-          .statementsMatching(subject, fieldCreator.predicate)
+          .statementsMatching(subject, fieldPredicate)
+        const fieldCreator = factory(fieldPredicate)
+        fieldCreators[fieldName] = fieldCreator
         const matchingFields = matchingQuads.map(
           quad => fieldCreator.fromQuad(quad)
         )
-        return Object.assign(prevFields, {[fieldName]: matchingFields})
+        return {...prevFields, ...{[fieldName]: matchingFields}}
       }, {})
     )
-    return new Model(subject, fields)
+    // By definition, all the predicates in `fieldMap` must be unique, hence
+    // inverting the map to have a (predicate -> fieldKey) mapping is safe.
+    const reverseFieldMap = Object.keys(fieldMap).reduce(
+      (rdxn, fieldKey) => { return {...rdxn, [fieldMap[fieldKey]]: fieldKey} }, {}
+    )
+    return new Model(subject, fields, [], fieldCreators, reverseFieldMap)
   }
 }
 
@@ -57,11 +79,22 @@ export class Model {
    * removed from the model.
    * @returns {Model} the newly constructed model.
    */
-  constructor (subject, fields, graveyard = []) {
+  constructor (subject, fields, graveyard = [], fieldCreators = {}, reverseFieldMap = {}) {
     this.subject = subject
     this._fields = fields
+    this.fieldCreators = fieldCreators
+    this.reverseFieldMap = reverseFieldMap
     this.graveyard = graveyard
     Object.freeze(this)
+  }
+
+  fromCurrentState ({
+    fields = this._fields,
+    graveyard = this.graveyard,
+    fieldCreators = this.fieldCreators,
+    reverseFieldMap = this.reverseFieldMap
+  }) {
+    return new Model(this.subject, fields, graveyard, fieldCreators, reverseFieldMap)
   }
 
   /**
@@ -103,11 +136,30 @@ export class Model {
    * @param {Field} field - the field to add.
    * @returns {Model} - the updated model.
    */
-  add (key, field) {
-    return new Model(
-      this.subject,
-      this._fields.set(key, [...this._fields.get(key), field])
-    )
+  add (key, fieldValue, fieldOptions) {
+    return this.fromCurrentState({
+      fields: this._fields.set(key, [
+        ...this._fields.get(key),
+        this.fieldCreators[key](fieldValue, fieldOptions)
+      ])
+    })
+  }
+
+  /**
+   * Adds a field from an RDF quad.
+   *
+   * @param {Object} quad - the RDF quad to be converted to a field and added to
+   * this model.
+   * @returns {Model} - the updated model.
+   */
+  addQuad (quad) {
+    const key = this.reverseFieldMap[quad.predicate]
+    return this.fromCurrentState({
+      fields: this._fields.set(key, [
+        ...this._fields.get(key),
+        this.fieldCreators[key].fromQuad(quad)
+      ])
+    })
   }
 
   /**
@@ -127,14 +179,16 @@ export class Model {
    * Creates a model with a modified field.
    *
    * @param {Field} oldField - the field which should be removed.
-   * @param {Object} newFieldArgs - arguments to create the new field.
-   * @param {String} newFieldArgs.value - the new field's value.
-   * @param {Boolean} newFieldArgs.listed - the new field's listed value.
+   * @param {String} newFieldValue - the new field's value.
+   * @param {Object} newFieldOptions - arguments to create the new field.
+   * @param {Boolean} newFieldOptions.listed - the new field's listed value.
    * @returns {Model} - the updated model.
    */
-  set (oldField, newFieldArgs) {
+  set (oldField, newFieldValue, newFieldOptions) {
     return this.map(field => {
-      return field.id === oldField.id ? field.set(newFieldArgs) : field
+      return field.id === oldField.id
+        ? field.set({...newFieldOptions, value: newFieldValue})
+        : field
     })
   }
   /**
@@ -245,11 +299,9 @@ export class Model {
    * @returns {Model} A new model containing the result of the field mapping.
    */
   map (fn) {
-    return new Model(
-      this.subject,
-      this._fields.map(fieldsArray => fieldsArray.map(fn)),
-      this.graveyard
-    )
+    return this.fromCurrentState({
+      fields: this._fields.map(fieldsArray => fieldsArray.map(fn))
+    })
   }
 
   /**
@@ -285,11 +337,10 @@ export class Model {
         }
         return testPassed
       }))
-    return new Model(
-      this.subject,
-      newFields,
-      [...this.graveyard, ...removedFields]
-    )
+    return this.fromCurrentState({
+      fields: newFields,
+      graveyard: [...this.graveyard, ...removedFields]
+    })
   }
 
   /**
@@ -298,11 +349,7 @@ export class Model {
    * @returns {Model} - The new graveyard-less model
    */
   clearGraveyard () {
-    return new Model(
-      this.subject,
-      this._fields,
-      []
-    )
+    return this.fromCurrentState({graveyard: []})
   }
 }
 

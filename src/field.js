@@ -17,6 +17,16 @@ import { isDefined } from './util'
  * are supported.
  * @property {Boolean} listed - Whether or not this field is listed (public) or
  * unlisted (private).
+ * @param {Object} options.sourceConfig - A configuration object containing
+ * the default listed and unlisted source graphs, and a mapping of all source
+ * graphs to whether they're listed.
+ * @param {Object} options.sourceConfig.defaultSources - An object with two
+ * keys, 'listed', and 'unlisted', which each map to strings representing URIs
+ * for the default listed and unlisted graphs, respectively.
+ * @param {Object} options.sourceConfig.sourceIndex - An object whose keys are
+ * string URIs and whose values are booleans indicating whether or not those
+ * URIs are listed or unlisted.  true indicates listed, and false indicates
+ * unlisted.
  */
 
 /**
