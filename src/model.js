@@ -1,7 +1,7 @@
 import Immutable from 'immutable'
 
 import { isDefined } from './util'
-import { fieldFactory } from '../src/field'
+import { fieldFactory } from './field'
 
 /**
  * A Model represents an RDF subgraph.  Specifically, it represents a number of
