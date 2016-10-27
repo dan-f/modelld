@@ -133,7 +133,7 @@ export class Model {
    * Creates a model with an extra field.
    *
    * @param {String} key - the key of the fields to add to.
-   * @param {Field} field - the field to add.
+   * @param {String} fieldValue - the value of the field to add.
    * @returns {Model} - the updated model.
    */
   add (key, fieldValue, fieldOptions) {
@@ -191,6 +191,20 @@ export class Model {
         : field
     })
   }
+
+  /**
+   * Creates a model with a modified field chosen by key.  This method should
+   * only be called with keys for which only one field exists, as there are no
+   * guarantees for how it picks a field.
+   *
+   * @param {String} key - the key of a field to replace.
+   * @param {String} fieldValue - the new field value.
+   * @returns {Model} - the updated model.
+   */
+  setAny (key, fieldValue, fieldOptions) {
+    return this.set(this.fields(key)[0], fieldValue, fieldOptions)
+  }
+
   /**
    * Compare the current state of the model with its original state and
    * determine, for each RDF named graph in the model, which fields should be

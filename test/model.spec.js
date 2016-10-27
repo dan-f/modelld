@@ -116,6 +116,11 @@ describe('Model', () => {
     expect(phones[1]).toEqual(secondPhone)
   })
 
+  it('can change the value of a field by key', () => {
+    expect(model.setAny('name', 'New Name').any('name')).toEqual('New Name')
+    expect(model.setAny('phone', 'tel:000-000-0000').any('phone')).toEqual('tel:000-000-0000')
+  })
+
   describe('diffing', () => {
     describe('for unchanged models', () => {
       it('shows no changes', () => {
