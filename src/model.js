@@ -195,14 +195,18 @@ export class Model {
   /**
    * Creates a model with a modified field chosen by key.  This method should
    * only be called with keys for which only one field exists, as there are no
-   * guarantees for how it picks a field.
+   * guarantees for how it picks a field.  A new field for the specified key if
+   * no existing field is found.
    *
    * @param {String} key - the key of a field to replace.
    * @param {String} fieldValue - the new field value.
    * @returns {Model} - the updated model.
    */
   setAny (key, fieldValue, fieldOptions) {
-    return this.set(this.fields(key)[0], fieldValue, fieldOptions)
+    const firstField = this.fields(key)[0]
+    return firstField
+      ? this.set(firstField, fieldValue, fieldOptions)
+      : this.add(key, fieldValue, fieldOptions)
   }
 
   /**
