@@ -58,6 +58,7 @@ describe('Model', () => {
     rdf.parse(profile, graph, profileURI, 'text/turtle')
 
     const profileModel = modelFactory(rdf, sourceConfig, {
+      age: vocab.foaf('age'),
       name: vocab.foaf('name'),
       phone: vocab.foaf('phone')
     })
@@ -119,6 +120,8 @@ describe('Model', () => {
   it('can change the value of a field by key', () => {
     expect(model.setAny('name', 'New Name').any('name')).toEqual('New Name')
     expect(model.setAny('phone', 'tel:000-000-0000').any('phone')).toEqual('tel:000-000-0000')
+    expect(model.any('age')).toBe(undefined)
+    expect(model.setAny('age', '24').any('age')).toEqual('24')
   })
 
   describe('diffing', () => {
