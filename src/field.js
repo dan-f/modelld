@@ -1,5 +1,5 @@
 import clone from 'lodash/clone'
-import uuid from 'node-uuid'
+import uuid from 'uuid'
 
 import { isDefined } from './util'
 
