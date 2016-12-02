@@ -142,7 +142,7 @@ describe('Model', () => {
           const phoneQuad = rdf.quad(
             rdf.sym(webId),
             vocab.foaf('phone'),
-            rdf.Literal.fromValue('tel:444-444-4444'),
+            rdf.namedNode('tel:444-444-4444'),
             rdf.sym(source)
           )
           expect(model.addQuad(phoneQuad).diff(rdf))
@@ -170,7 +170,7 @@ describe('Model', () => {
             rdf.st(
               subject,
               vocab.foaf('phone'),
-              value
+              rdf.namedNode(value)
             ).toString()
           ]
           expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
@@ -264,9 +264,7 @@ describe('Model', () => {
             [
               sourceConfig.defaultSources.listed,
               [],
-              // Note that all new fields are considered literals, hence the
-              // double quotes.
-              [`<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`]
+              [`<${webId}> ${vocab.foaf('phone')} <tel:000-000-0000> .`]
             ]
           ]
         },
@@ -279,9 +277,7 @@ describe('Model', () => {
             [
               sourceConfig.defaultSources.unlisted,
               [],
-              // Note that all new fields are considered literals, hence the
-              // double quotes.
-              [`<${webId}> ${vocab.foaf('phone')} "tel:111-111-1111" .`]
+              [`<${webId}> ${vocab.foaf('phone')} <tel:111-111-1111> .`]
             ]
           ]
         }
@@ -300,7 +296,7 @@ describe('Model', () => {
               // The new field should now be tracking its previously "new" state
               // as its "old" state in the .quad property.
               expect(phones[2].originalObject).toEqual(
-                rdf.Literal.fromValue(value)
+                rdf.namedNode(value)
               )
               expect(phones[2].originalSource).toEqual(
                 rdf.namedNode(
@@ -404,12 +400,12 @@ describe('Model', () => {
           [
             listedURI,
             [],
-            [`<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`]
+            [`<${webId}> ${vocab.foaf('phone')} <tel:000-000-0000> .`]
           ],
           [
             unlistedURI,
             [],
-            [`<${webId}> ${vocab.foaf('phone')} "tel:111-111-1111" .`]
+            [`<${webId}> ${vocab.foaf('phone')} <tel:111-111-1111> .`]
           ]
         ]
         return newModel
@@ -420,7 +416,7 @@ describe('Model', () => {
             const addedPhone = updatedModel.fields('phone')[2]
             expect(addedPhone.value).toBe('tel:000-000-0000')
             expect(addedPhone.originalQuad(rdf, subject).toString()).toBe(
-              `<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`
+              `<${webId}> ${vocab.foaf('phone')} <tel:000-000-0000> .`
             )
             const phoneNotPatched = updatedModel.fields('phone')[3]
             expect(phoneNotPatched.value).toBe('tel:111-111-1111')

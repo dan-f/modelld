@@ -213,6 +213,20 @@ describe('Field', () => {
         )
     })
 
+    it('constructs a namedNode when the field value is a URI', () => {
+      const storage = factory(vocab.pim('storage'))
+      const storageField = storage('https://example.databox.me/storage/', {listed: true})
+      expect(storageField.toQuad(rdf, rdf.sym('#this')))
+        .toEqual(
+          rdf.quad(
+            rdf.sym('#this'),
+            vocab.pim('storage'),
+            rdf.sym('https://example.databox.me/storage/'),
+            rdf.sym(defaultSources.listed)
+          )
+        )
+    })
+
     it('remembers which resource it came from', () => {
       // When an unlisted field gets toggled as listed and then toggled as
       // unlisted once again, it should remember which unlisted resource it

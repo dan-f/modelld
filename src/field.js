@@ -1,5 +1,6 @@
 import clone from 'lodash/clone'
 import uuid from 'node-uuid'
+import { isUri } from 'valid-url'
 
 import { isDefined } from './util'
 
@@ -184,7 +185,9 @@ export class Field {
         object.uri = this.value
       }
     } else {
-      object = rdf.Literal.fromValue(this.value)
+      object = isUri(this.value)
+        ? rdf.namedNode(this.value)
+        : rdf.Literal.fromValue(this.value)
     }
 
     return rdf.quad(
