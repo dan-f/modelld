@@ -133,7 +133,7 @@ export class Model {
    * Creates a model with an extra field.
    *
    * @param {String} key - the key of the fields to add to.
-   * @param {String} fieldValue - the value of the field to add.
+   * @param fieldValue - the value of the field to add.
    * @returns {Model} - the updated model.
    */
   add (key, fieldValue, fieldOptions) {
@@ -179,7 +179,7 @@ export class Model {
    * Creates a model with a modified field.
    *
    * @param {Field} oldField - the field which should be removed.
-   * @param {String} newFieldValue - the new field's value.
+   * @param newFieldValue - the new field's value.
    * @param {Object} newFieldOptions - arguments to create the new field.
    * @param {Boolean} newFieldOptions.listed - the new field's listed value.
    * @returns {Model} - the updated model.
@@ -199,7 +199,7 @@ export class Model {
    * no existing field is found.
    *
    * @param {String} key - the key of a field to replace.
-   * @param {String} fieldValue - the new field value.
+   * @param fieldValue - the new field value.
    * @returns {Model} - the updated model.
    */
   setAny (key, fieldValue, fieldOptions) {
