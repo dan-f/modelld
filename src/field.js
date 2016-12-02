@@ -1,5 +1,6 @@
 import clone from 'lodash/clone'
 import uuid from 'node-uuid'
+import { isUri } from 'valid-url'
 
 import { isDefined } from './util'
 
@@ -13,8 +14,7 @@ import { isDefined } from './util'
  * @property {Object=} predicate- The RDF predicate which this field represents.
  * A field either has a quad or a predicate.
  * @property {String} id - A UUID.
- * @property {String} value - The value of this field.  Currently only strings
- * are supported.
+ * @property value - The value of this field.
  * @property {Boolean} listed - Whether or not this field is listed (public) or
  * unlisted (private).
  * @param {Object} options.sourceConfig - A configuration object containing
@@ -91,8 +91,8 @@ export class Field {
    * existing quad.
    * @param {Object=} options.predicate - The RDF predicate which this field
    * represents.  Must either provide a quad or a predicate.
-   * @param {String=} options.value - Optionally specifies the current value of
-   * this field.  Should only be provided by this field class internally when
+   * @param options.value - Optionally specifies the current value of this
+   * field.  Should only be provided by this field class internally when
    * updating a field.
    * @param {Boolean=} options.listed - Whether or not this field is listed
    * (public) or unlisted (private).
@@ -184,7 +184,9 @@ export class Field {
         object.uri = this.value
       }
     } else {
-      object = rdf.Literal.fromValue(this.value)
+      object = isUri(this.value)
+        ? rdf.namedNode(this.value)
+        : rdf.Literal.fromValue(this.value)
     }
 
     return rdf.quad(
@@ -233,7 +235,7 @@ export class Field {
    * Returns a field with the specified state.
    *
    * @param {Object} options - An options object specifying named parameters.
-   * @param {String} options.value - The new field value.
+   * @param options.value - The new field value.
    * @param {Boolean} options.listed - The new listed value.
    * @returns {Field} A field with the specified state.
    */
