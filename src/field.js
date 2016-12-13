@@ -1,6 +1,5 @@
 import clone from 'lodash/clone'
 import uuid from 'node-uuid'
-import { isUri } from 'valid-url'
 
 import { isDefined } from './util'
 
@@ -53,6 +52,7 @@ export function fieldFactory (sourceConfig) {
         predicate,
         value,
         listed: options.listed,
+        namedNode: options.namedNode,
         sourceConfig
       })
     }
@@ -96,6 +96,8 @@ export class Field {
    * updating a field.
    * @param {Boolean=} options.listed - Whether or not this field is listed
    * (public) or unlisted (private).
+   * @param {Boolean=} options.namedNode - Whether or not this field is a
+   * NamedNode.
    * @param {Object} options.sourceConfig - A configuration object containing
    * the default listed and unlisted source graphs, and a mapping of all source
    * graphs to whether they're listed.
@@ -108,7 +110,7 @@ export class Field {
    * unlisted.
    * @returns {Object} the newly constructed field.
    */
-  constructor ({ predicate, value, listed, originalObject, originalSource, sourceConfig } = {}) {
+  constructor ({ predicate, value, namedNode, listed, originalObject, originalSource, sourceConfig } = {}) {
     if (!(isDefined(predicate) && isDefined(sourceConfig)) ||
         !(isDefined(value) || (isDefined(originalObject)))) {
       throw new Error('Insufficient arguments.')
@@ -127,6 +129,9 @@ export class Field {
     }
     if (isDefined(value)) {
       this.value = value
+    }
+    if (isDefined(namedNode)) {
+      this.namedNode = namedNode || false
     }
     if (isDefined(listed)) {
       this.listed = listed
@@ -185,7 +190,7 @@ export class Field {
         object.uri = this.value
       }
     } else {
-      object = isUri(this.value)
+      object = this.namedNode
         ? rdf.NamedNode.fromValue(this.value)
         : rdf.Literal.fromValue(this.value)
     }
@@ -240,12 +245,13 @@ export class Field {
    * @param {Boolean} options.listed - The new listed value.
    * @returns {Field} A field with the specified state.
    */
-  set ({ value = null, listed = null }) {
+  set ({ value = null, listed = null, namedNode = false }) {
     return new Field({
       originalObject: this.originalObject,
       originalSource: this.originalSource,
       predicate: this.predicate,
       value: value !== null ? value : this.value,
+      namedNode,
       listed: listed !== null ? listed : this.listed,
       sourceConfig: this._sourceConfig
     })

@@ -182,6 +182,8 @@ export class Model {
    * @param newFieldValue - the new field's value.
    * @param {Object} newFieldOptions - arguments to create the new field.
    * @param {Boolean} newFieldOptions.listed - the new field's listed value.
+   * @param {Boolean} newFieldOptions.namedNode - whether the new field is a
+   * named node or not.
    * @returns {Model} - the updated model.
    */
   set (oldField, newFieldValue, newFieldOptions) {
@@ -200,6 +202,10 @@ export class Model {
    *
    * @param {String} key - the key of a field to replace.
    * @param fieldValue - the new field value.
+   * @param {Object} FieldOptions - arguments to create the new field.
+   * @param {Boolean} FieldOptions.listed - the new field's listed value.
+   * @param {Boolean} FieldOptions.namedNode - whether the new field is a named
+   * node or not.
    * @returns {Model} - the updated model.
    */
   setAny (key, fieldValue, fieldOptions) {

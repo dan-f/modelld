@@ -216,9 +216,9 @@ describe('Field', () => {
         )
     })
 
-    it('constructs a namedNode when the field value is a URI', () => {
+    it('constructs a namedNode when the field is specified as a NamedNode', () => {
       const storage = factory(vocab.pim('storage'))
-      const storageField = storage('https://example.databox.me/storage/', {listed: true})
+      const storageField = storage('https://example.databox.me/storage/', {listed: true, namedNode: true})
       expect(storageField.toQuad(rdf, rdf.NamedNode.fromValue('https://example.com/storage#this')))
         .toEqual(
           rdf.quad(
