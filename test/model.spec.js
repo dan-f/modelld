@@ -53,7 +53,7 @@ describe('Model', () => {
           <http://xmlns.com/foaf/0.1/phone> <tel:123-456-7890> ;
           <http://xmlns.com/foaf/0.1/phone> <tel:098-765-4321> .
     `
-    subject = rdf.sym(webId)
+    subject = rdf.NamedNode.fromValue(webId)
     const graph = rdf.graph()
     rdf.parse(profile, graph, profileURI, 'text/turtle')
 
@@ -140,10 +140,10 @@ describe('Model', () => {
       testData.forEach(([type, source]) => {
         it(`does not add ${type} fields to the diff`, () => {
           const phoneQuad = rdf.quad(
-            rdf.sym(webId),
+            rdf.NamedNode.fromValue(webId),
             vocab.foaf('phone'),
-            rdf.namedNode('tel:444-444-4444'),
-            rdf.sym(source)
+            rdf.NamedNode.fromValue('tel:444-444-4444'),
+            rdf.NamedNode.fromValue(source)
           )
           expect(model.addQuad(phoneQuad).diff(rdf))
             .toEqual({})
@@ -170,7 +170,7 @@ describe('Model', () => {
             rdf.st(
               subject,
               vocab.foaf('phone'),
-              rdf.namedNode(value)
+              rdf.NamedNode.fromValue(value)
             ).toString()
           ]
           expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
@@ -296,10 +296,10 @@ describe('Model', () => {
               // The new field should now be tracking its previously "new" state
               // as its "old" state in the .quad property.
               expect(phones[2].originalObject).toEqual(
-                rdf.namedNode(value)
+                rdf.NamedNode.fromValue(value)
               )
               expect(phones[2].originalSource).toEqual(
-                rdf.namedNode(
+                rdf.NamedNode.fromValue(
                   listed
                     ? sourceConfig.defaultSources.listed
                     : sourceConfig.defaultSources.unlisted

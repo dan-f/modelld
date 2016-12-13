@@ -119,7 +119,7 @@ export class Field {
     // 'value' and 'listed'.
     if (isDefined(originalObject)) {
       this.originalObject = originalObject
-      this.value = originalObject.value
+      this.value = rdfToJs(originalObject)
     }
     if (isDefined(originalSource)) {
       this.originalSource = originalSource
@@ -164,7 +164,7 @@ export class Field {
     } else {
       sourceURI = this.listed ? defaultSources.listed : defaultSources.unlisted
     }
-    return rdf.namedNode(sourceURI)
+    return rdf.NamedNode.fromValue(sourceURI)
   }
 
   /**
@@ -179,13 +179,14 @@ export class Field {
     let object
     if (isDefined(this.originalObject)) {
       object = clone(this.originalObject)
-      object.value = this.value
+      // Convert the native JS value back to the corresponding RDF string value
+      object.value = this.originalObject.constructor.fromValue(this.value).value
       if (isDefined(object.uri)) {
         object.uri = this.value
       }
     } else {
       object = isUri(this.value)
-        ? rdf.namedNode(this.value)
+        ? rdf.NamedNode.fromValue(this.value)
         : rdf.Literal.fromValue(this.value)
     }
 
@@ -276,4 +277,57 @@ export class Field {
       sourceConfig: this._sourceConfig
     })
   }
+}
+
+/**
+ * Extracts the value of an rdf node into the native JS representation of that
+ * node's type/value.  For example, it will extract booleans from a node with a
+ * datatype of xsd:boolean and a value of '0' or '1'.
+ *
+ * @param {Object} node - The rdf node object.
+ * @returns The value of that node.
+ */
+function rdfToJs (node) {
+  let value
+  const rdfVal = node.value
+  const datatype = node.datatype
+  const throwError = () => {
+    throw new Error(
+      `Cannot parse rdf type/value to JS value.  Given value [${rdfVal}] of type [${datatype}].`
+    )
+  }
+  if (datatype) {
+    const XMLSchema = 'http://www.w3.org/2001/XMLSchema#'
+    switch (datatype.value) {
+      case `${XMLSchema}boolean`:
+        if (rdfVal === '1') {
+          value = true
+        } else if (rdfVal === '0') {
+          value = false
+        } else {
+          throwError()
+        }
+        break
+      case `${XMLSchema}dateTime`:
+        // Format of date string can be found at: http://books.xmlschemata.org/relaxng/ch19-77049.html
+        value = new Date(rdfVal)
+        break
+      case `${XMLSchema}decimal`:
+      case `${XMLSchema}double`:
+        value = Number.parseFloat(rdfVal)
+        break
+      case `${XMLSchema}integer`:
+        value = Number.parseInt(rdfVal)
+        break
+      case 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString':
+      case `${XMLSchema}string`:
+      default:
+        value = rdfVal
+        break
+    }
+  } else {
+    // Assume string if there's no provided datatype
+    value = rdfVal
+  }
+  return value
 }

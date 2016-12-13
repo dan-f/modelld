@@ -43,7 +43,7 @@ export function modelFactory (rdf, sourceConfig, fieldMap) {
   const factory = fieldFactory(sourceConfig)
   return (graph, subjectStr) => {
     const fieldCreators = {}
-    const subject = rdf.namedNode(subjectStr)
+    const subject = rdf.NamedNode.fromValue(subjectStr)
     const fields = Immutable.Map(
       Object.keys(fieldMap).reduce((prevFields, fieldName) => {
         const fieldPredicate = fieldMap[fieldName]
