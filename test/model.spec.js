@@ -60,7 +60,8 @@ describe('Model', () => {
     const profileModel = modelFactory(rdf, sourceConfig, {
       age: vocab.foaf('age'),
       name: vocab.foaf('name'),
-      phone: vocab.foaf('phone')
+      phone: vocab.foaf('phone'),
+      prefs: vocab.pim('preferencesFile')
     })
     model = profileModel(graph, webId)
   })
@@ -124,6 +125,15 @@ describe('Model', () => {
     expect(model.setAny('age', '24').any('age')).toEqual('24')
   })
 
+  it('can change the value of a field to a NamedNode', () => {
+    const newPrefs = 'https://example.com/me/storage/'
+    const updatedModel = model.setAny('prefs', newPrefs, {namedNode: true})
+    const subject = rdf.NamedNode.fromValue('https://example.com/profile#me')
+    expect(updatedModel.fields('prefs')[0].toQuad(rdf, subject).object).toEqual(
+      rdf.NamedNode.fromValue('https://example.com/me/storage/')
+    )
+  })
+
   describe('diffing', () => {
     describe('for unchanged models', () => {
       it('shows no changes', () => {
@@ -142,7 +152,7 @@ describe('Model', () => {
           const phoneQuad = rdf.quad(
             rdf.NamedNode.fromValue(webId),
             vocab.foaf('phone'),
-            rdf.NamedNode.fromValue('tel:444-444-4444'),
+            rdf.Literal.fromValue('tel:444-444-4444'),
             rdf.NamedNode.fromValue(source)
           )
           expect(model.addQuad(phoneQuad).diff(rdf))
@@ -170,7 +180,7 @@ describe('Model', () => {
             rdf.st(
               subject,
               vocab.foaf('phone'),
-              rdf.NamedNode.fromValue(value)
+              rdf.Literal.fromValue(value)
             ).toString()
           ]
           expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
@@ -264,7 +274,7 @@ describe('Model', () => {
             [
               sourceConfig.defaultSources.listed,
               [],
-              [`<${webId}> ${vocab.foaf('phone')} <tel:000-000-0000> .`]
+              [`<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`]
             ]
           ]
         },
@@ -277,7 +287,7 @@ describe('Model', () => {
             [
               sourceConfig.defaultSources.unlisted,
               [],
-              [`<${webId}> ${vocab.foaf('phone')} <tel:111-111-1111> .`]
+              [`<${webId}> ${vocab.foaf('phone')} "tel:111-111-1111" .`]
             ]
           ]
         }
@@ -296,7 +306,7 @@ describe('Model', () => {
               // The new field should now be tracking its previously "new" state
               // as its "old" state in the .quad property.
               expect(phones[2].originalObject).toEqual(
-                rdf.NamedNode.fromValue(value)
+                rdf.Literal.fromValue(value)
               )
               expect(phones[2].originalSource).toEqual(
                 rdf.NamedNode.fromValue(
@@ -400,12 +410,12 @@ describe('Model', () => {
           [
             listedURI,
             [],
-            [`<${webId}> ${vocab.foaf('phone')} <tel:000-000-0000> .`]
+            [`<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`]
           ],
           [
             unlistedURI,
             [],
-            [`<${webId}> ${vocab.foaf('phone')} <tel:111-111-1111> .`]
+            [`<${webId}> ${vocab.foaf('phone')} "tel:111-111-1111" .`]
           ]
         ]
         return newModel
@@ -416,7 +426,7 @@ describe('Model', () => {
             const addedPhone = updatedModel.fields('phone')[2]
             expect(addedPhone.value).toBe('tel:000-000-0000')
             expect(addedPhone.originalQuad(rdf, subject).toString()).toBe(
-              `<${webId}> ${vocab.foaf('phone')} <tel:000-000-0000> .`
+              `<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`
             )
             const phoneNotPatched = updatedModel.fields('phone')[3]
             expect(phoneNotPatched.value).toBe('tel:111-111-1111')
