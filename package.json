@@ -15,7 +15,7 @@
     "pretest": "npm run lint",
     "posttest": "npm run coverage:check",
     "test": "nyc mocha --compilers js:babel-core/register test/**.spec.js",
-    "test:develop": "mocha -d -w --compilers js:babel-core/register test/*.spec.js",
+    "test:develop": "mocha -d -w -G --compilers js:babel-core/register test/*.spec.js",
     "coverage:check": "nyc check-coverage --lines 98",
     "coverage:report": "nyc report --repoprter=text-lcov --reporter=html",
     "coverage:coveralls": "nyc report --reporter=text-lcov | coveralls",
@@ -50,7 +50,7 @@
     "expect": "^1.20.2",
     "mocha": "^3.0.2",
     "nyc": "^8.1.0",
-    "rdflib": "^0.9.0",
+    "rdflib": "^0.12.3",
     "sinon": "^1.17.5",
     "solid-namespace": "^0.1.0",
     "standard": "^7.1.2",
@@ -60,7 +60,6 @@
     "immutable": "^3.8.1",
     "lodash": "^4.14.2",
     "node-uuid": "^1.4.7",
-    "rdflib": "^0.9.0",
     "valid-url": "^1.0.9"
   }
 }
