@@ -21,27 +21,17 @@ import { fieldFactory } from './field'
  * Generates a factory for creating models.
  *
  * @param {Object} rdf - An RDF library, currently assumed to be rdflib.js.
- * @param {Object} options.sourceConfig - A configuration object containing the
- * default listed and unlisted source graphs, and a mapping of all source graphs
- * to whether they're listed.
- * @param {Object} options.sourceConfig.defaultSources - An object with two
- * keys, 'listed', and 'unlisted', which each map to strings representing URIs
- * for the default listed and unlisted graphs, respectively.
- * @param {Object} options.sourceConfig.sourceIndex - An object whose keys are
- * string URIs and whose values are booleans indicating whether or not those
- * URIs are listed or unlisted.  true indicates listed, and false indicates
- * unlisted.
  * @param {Object} fieldMap - A mapping of predicate aliases to RDF predicate
  * nodes. For example: { 'name': '<http://xmlns.com/foaf/0.1/name>' }
  * @param {Object} fieldCreators - A mapping from field keys to field factory
  * functions.
  * @returns {Function} - A factory function for creating actual models.  The
- * factory takes two arguments - an RDF graph object to parse and the subject of
- * the model as a string.
+ * factory takes three arguments - an RDF graph object as the data source, the
+ * URI of the named graph which new fields are added to, and the subject of the
+ * model as a string.
  */
-export function modelFactory (rdf, sourceConfig, fieldMap) {
-  const factory = fieldFactory(sourceConfig)
-  return (graph, subjectStr) => {
+export function modelFactory (rdf, fieldMap) {
+  return (graph, defaultNamedGraph, subjectStr) => {
     const fieldCreators = {}
     const subject = rdf.NamedNode.fromValue(subjectStr)
     const fields = Immutable.Map(
@@ -49,7 +39,7 @@ export function modelFactory (rdf, sourceConfig, fieldMap) {
         const fieldPredicate = fieldMap[fieldName]
         const matchingQuads = graph
           .statementsMatching(subject, fieldPredicate)
-        const fieldCreator = factory(fieldPredicate)
+        const fieldCreator = fieldFactory(fieldPredicate)
         fieldCreators[fieldName] = fieldCreator
         const matchingFields = matchingQuads.map(
           quad => fieldCreator.fromQuad(quad)
@@ -62,7 +52,7 @@ export function modelFactory (rdf, sourceConfig, fieldMap) {
     const reverseFieldMap = Object.keys(fieldMap).reduce(
       (rdxn, fieldKey) => { return {...rdxn, [fieldMap[fieldKey]]: fieldKey} }, {}
     )
-    return new Model(subject, fields, [], fieldCreators, reverseFieldMap)
+    return new Model(subject, fields, defaultNamedGraph, [], fieldCreators, reverseFieldMap)
   }
 }
 
@@ -79,9 +69,10 @@ export class Model {
    * removed from the model.
    * @returns {Model} the newly constructed model.
    */
-  constructor (subject, fields, graveyard = [], fieldCreators = {}, reverseFieldMap = {}) {
+  constructor (subject, fields, defaultNamedGraph, graveyard = [], fieldCreators = {}, reverseFieldMap = {}) {
     this.subject = subject
     this._fields = fields
+    this.defaultNamedGraph = defaultNamedGraph
     this.fieldCreators = fieldCreators
     this.reverseFieldMap = reverseFieldMap
     this.graveyard = graveyard
@@ -90,11 +81,12 @@ export class Model {
 
   fromCurrentState ({
     fields = this._fields,
+    defaultNamedGraph = this.defaultNamedGraph,
     graveyard = this.graveyard,
     fieldCreators = this.fieldCreators,
     reverseFieldMap = this.reverseFieldMap
   }) {
-    return new Model(this.subject, fields, graveyard, fieldCreators, reverseFieldMap)
+    return new Model(this.subject, fields, defaultNamedGraph, graveyard, fieldCreators, reverseFieldMap)
   }
 
   /**
@@ -136,11 +128,12 @@ export class Model {
    * @param fieldValue - the value of the field to add.
    * @returns {Model} - the updated model.
    */
-  add (key, fieldValue, fieldOptions) {
+  add (key, fieldValue, options = {}) {
+    const namedGraph = options.namedGraph || this.defaultNamedGraph
     return this.fromCurrentState({
       fields: this._fields.set(key, [
         ...this._fields.get(key),
-        this.fieldCreators[key](fieldValue, fieldOptions)
+        this.fieldCreators[key](fieldValue, namedGraph, options)
       ])
     })
   }
@@ -181,7 +174,9 @@ export class Model {
    * @param {Field} oldField - the field which should be removed.
    * @param newFieldValue - the new field's value.
    * @param {Object} newFieldOptions - arguments to create the new field.
-   * @param {Boolean} newFieldOptions.listed - the new field's listed value.
+   * @param {String|NamedNode} newFieldOptions.namedGraph - the namedgraph in
+   * which to store this field, if different from the model's default named
+   * graph.
    * @param {Boolean} newFieldOptions.namedNode - whether the new field is a
    * named node or not.
    * @returns {Model} - the updated model.
@@ -202,9 +197,10 @@ export class Model {
    *
    * @param {String} key - the key of a field to replace.
    * @param fieldValue - the new field value.
-   * @param {Object} FieldOptions - arguments to create the new field.
-   * @param {Boolean} FieldOptions.listed - the new field's listed value.
-   * @param {Boolean} FieldOptions.namedNode - whether the new field is a named
+   * @param {Object} fieldOptions - arguments to create the new field.
+   * @param {String|NamedNode} fieldOptions.namedGraph - the namedgraph in which
+   * to store this field, if different from the model's default named graph.
+   * @param {Boolean} fieldOptions.namedNode - whether the new field is a named
    * node or not.
    * @returns {Model} - the updated model.
    */
@@ -240,7 +236,7 @@ export class Model {
       .toArray()
       .reduce((reduction, cur) => [...reduction, ...cur])
       .reduce((previousMap, field) => {
-        const map = Object.assign({}, previousMap)
+        const map = {...previousMap}
         const newQuad = field.toQuad(rdf, this.subject)
         const newSourceURI = newQuad.graph.value
         const originalQuad = field.originalQuad(rdf, this.subject)
@@ -296,7 +292,7 @@ export class Model {
     return patchURIs(rdf, web, diffMap)
       .then(patchedURIs => {
         const updatedModel = this.map(
-          field => patchedURIs.has(field.getCurrentSource(rdf).value)
+          field => patchedURIs.has(field.namedGraph.value)
             ? field.fromCurrentState(rdf, this.subject)
             : field
         ).clearGraveyard()
