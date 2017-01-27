@@ -12,19 +12,6 @@ describe('Model', () => {
   // Constants available for use within describe() blocks
   const profileURI = 'http://mr-cool.example.com/profile/card'
   const webId = `${profileURI}#me`
-  const sourceConfig = {
-    defaultSources: {
-      listed: profileURI,
-      unlisted: 'http://mr-cool.example.com/unlisted'
-    },
-    sourceIndex: {
-      'http://mr-cool.example.com/profile/card': true,
-      'http://mr-cool.example.com/listed': true,
-      'http://mr-cool.example.com/another-listed': true,
-      'http://mr-cool.example.com/unlisted': false,
-      'http://mr-cool.example.com/another-unlisted': false
-    }
-  }
 
   // These are dynamically set in beforeEach meaning they're only available
   // within it() blocks.
@@ -57,13 +44,13 @@ describe('Model', () => {
     const graph = rdf.graph()
     rdf.parse(profile, graph, profileURI, 'text/turtle')
 
-    const profileModel = modelFactory(rdf, sourceConfig, {
+    const profileModel = modelFactory(rdf, {
       age: vocab.foaf('age'),
       name: vocab.foaf('name'),
       phone: vocab.foaf('phone'),
       prefs: vocab.pim('preferencesFile')
     })
-    model = profileModel(graph, webId)
+    model = profileModel(graph, profileURI, webId)
   })
 
   it('can get fields by name', () => {
@@ -104,7 +91,7 @@ describe('Model', () => {
   })
 
   it('can not remove fields which do not belong to the model', () => {
-    const notOwnedPhone = model.fieldCreators['phone']('tel:444-444-4444')
+    const notOwnedPhone = model.fieldCreators['phone']('tel:444-444-4444', profileURI)
     expect(model.remove(notOwnedPhone)).toEqual(model)
   })
 
@@ -143,8 +130,7 @@ describe('Model', () => {
 
     describe('after adding quad-constructed fields', () => {
       const testData = [
-        ['familiar (listed)', sourceConfig.defaultSources.listed],
-        ['familiar (unlisted)', sourceConfig.defaultSources.unlisted],
+        ['familiar', profileURI],
         ['unfamiliar', 'https://unknown-server.com/resource']
       ]
       testData.forEach(([type, source]) => {
@@ -162,72 +148,76 @@ describe('Model', () => {
     })
 
     describe('after adding fields', () => {
-      const testData = [
-        {value: 'tel:000-000-0000', listed: true},
-        {value: 'tel:111-111-1111', listed: false}
-      ]
-      testData.forEach(fieldData => {
-        const {value, listed} = fieldData
-        it(`shows that a ${listed ? 'listed' : 'unlisted'} field should be inserted into the graph`, () => {
-          const uri = listed
-            ? sourceConfig.defaultSources.listed
-            : sourceConfig.defaultSources.unlisted
-          const updatedModel = model.add('phone', value, {listed})
-          const expectedDiff = {}
-          expectedDiff[uri] = {}
-          expectedDiff[uri].toDel = []
-          expectedDiff[uri].toIns = [
-            rdf.st(
-              subject,
-              vocab.foaf('phone'),
-              rdf.Literal.fromValue(value)
-            ).toString()
-          ]
-          expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
-        })
+      it('shows that a field should be inserted into the graph', () => {
+        const value = 'tel:000-000-0000'
+        const uri = profileURI
+        const updatedModel = model.add('phone', value)
+        const expectedDiff = {}
+        expectedDiff[uri] = {}
+        expectedDiff[uri].toDel = []
+        expectedDiff[uri].toIns = [
+          rdf.st(
+            subject,
+            vocab.foaf('phone'),
+            rdf.Literal.fromValue(value)
+          ).toString()
+        ]
+        expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
       })
     })
 
     describe('after removing fields', () => {
       it('shows that a field should be removed from the graph', () => {
-        const listedURI = sourceConfig.defaultSources.listed
+        const uri = profileURI
         const removedPhone = model.fields('phone')[1]
         const updatedModel = model.remove(removedPhone)
         const expectedDiff = {}
-        expectedDiff[listedURI] = {}
-        expectedDiff[listedURI].toDel = [
+        expectedDiff[uri] = {}
+        expectedDiff[uri].toDel = [
           removedPhone.toQuad(rdf, subject).toString()
         ]
-        expectedDiff[listedURI].toIns = []
+        expectedDiff[uri].toIns = []
         expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
       })
     })
 
     describe('after updating fields', () => {
-      const testData = [
-        {value: 'tel:000-000-0000', listed: true},
-        {value: 'tel:111-111-1111', listed: false}
-      ]
-      testData.forEach(fieldData => {
-        const {value, listed} = fieldData
-        it(`shows that a ${listed ? 'listed' : 'unlisted'} field should be added to and removed from the graph`, () => {
-          const newPhoneURI = listed
-            ? sourceConfig.defaultSources.listed
-            : sourceConfig.defaultSources.unlisted
-          const oldPhone = model.fields('phone')[1]
-          const oldPhoneURI = oldPhone.originalSource.value
-          const updatedModel = model.set(oldPhone, value, {listed})
-          const expectedDiff = {}
-          expectedDiff[oldPhoneURI] = {toIns: [], toDel: []}
-          expectedDiff[newPhoneURI] = {toIns: [], toDel: []}
-          expectedDiff[oldPhoneURI].toDel.push(
-            `<${webId}> ${vocab.foaf('phone')} <${oldPhone.value}> .`
-          )
-          expectedDiff[newPhoneURI].toIns.push(
-            `<${webId}> ${vocab.foaf('phone')} <${value}> .`
-          )
-          expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
-        })
+      it('shows that a field should be added to and removed from the graph', () => {
+        const value = 'tel:000-000-0000'
+        const newPhoneURI = profileURI
+        const oldPhone = model.fields('phone')[1]
+        const oldPhoneURI = profileURI
+        const updatedModel = model.set(oldPhone, value)
+        const expectedDiff = {}
+        expectedDiff[oldPhoneURI] = {toIns: [], toDel: []}
+        expectedDiff[newPhoneURI] = {toIns: [], toDel: []}
+        expectedDiff[oldPhoneURI].toDel.push(
+          `<${webId}> ${vocab.foaf('phone')} <${oldPhone.value}> .`
+        )
+        expectedDiff[newPhoneURI].toIns.push(
+          `<${webId}> ${vocab.foaf('phone')} <${value}> .`
+        )
+        expect(updatedModel.diff(rdf)).toEqual(expectedDiff)
+      })
+    })
+
+    it('shows when a field should be moved to a new graph', () => {
+      const newGraphUrl = 'https://example.com/other-resource'
+      const newModel = model.setAny('name', 'New Name', {
+        namedGraph: newGraphUrl
+      })
+      expect(newModel.fields('name')[0].namedGraph.equals(
+        rdf.NamedNode.fromValue(newGraphUrl)
+      )).toBe(true)
+      expect(newModel.diff(rdf)).toEqual({
+        [profileURI]: {
+          toDel: [`<${webId}> ${vocab.foaf('name')} "Mr. Cool" .`],
+          toIns: []
+        },
+        [newGraphUrl]: {
+          toDel: [],
+          toIns: [`<${webId}> ${vocab.foaf('name')} "New Name" .`]
+        }
       })
     })
   })
@@ -264,60 +254,31 @@ describe('Model', () => {
     })
 
     describe('after adding fields', () => {
-      const testData = [
-        {
-          fieldData: {
-            value: 'tel:000-000-0000',
-            listed: true
-          },
-          expectedPatchCalls: [
-            [
-              sourceConfig.defaultSources.listed,
-              [],
-              [`<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`]
-            ]
+      it('should patch the new field\'s URI for a field and return the updated model', () => {
+        const value = 'tel:000-000-0000'
+        const expectedPatchCalls = [
+          [
+            profileURI,
+            [],
+            [`<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`]
           ]
-        },
-        {
-          fieldData: {
-            value: 'tel:111-111-1111',
-            listed: false
-          },
-          expectedPatchCalls: [
-            [
-              sourceConfig.defaultSources.unlisted,
-              [],
-              [`<${webId}> ${vocab.foaf('phone')} "tel:111-111-1111" .`]
-            ]
-          ]
-        }
-      ]
-      testData.forEach(({fieldData, expectedPatchCalls}) => {
-        const {value, listed} = fieldData
-        it(`should patch the new field's URI for a ${listed ? 'listed' : 'unlisted'} field and return the updated model`, () => {
-          const {patchSpy, webClient} = createFakeWebClient()
-          const modelPlusField = model.add('phone', value, {listed})
-          return modelPlusField
-            .save(rdf, webClient)
-            .then(newModel => {
-              expectWebCalls(webClient, patchSpy, expectedPatchCalls)
-              const phones = newModel.fields('phone')
-              expect(phones.length).toBe(3)
-              // The new field should now be tracking its previously "new" state
-              // as its "old" state in the .quad property.
-              expect(phones[2].originalObject).toEqual(
-                rdf.Literal.fromValue(value)
-              )
-              expect(phones[2].originalSource).toEqual(
-                rdf.NamedNode.fromValue(
-                  listed
-                    ? sourceConfig.defaultSources.listed
-                    : sourceConfig.defaultSources.unlisted
-                )
-              )
-              expect(newModel.diff(rdf)).toEqual({})
-            })
-        })
+        ]
+        const {patchSpy, webClient} = createFakeWebClient()
+        return model
+          .add('phone', value)
+          .save(rdf, webClient)
+          .then(newModel => {
+            expectWebCalls(webClient, patchSpy, expectedPatchCalls)
+            const phones = newModel.fields('phone')
+            expect(phones.length).toBe(3)
+            // The new field should now be tracking its previously "new" state
+            // as its "old" state in the .quad property.
+            expect(phones[2].originalObject).toEqual(
+              rdf.Literal.fromValue(value)
+            )
+            expect(phones[2].namedGraph.equals(rdf.NamedNode.fromValue(profileURI))).toBe(true)
+            expect(newModel.diff(rdf)).toEqual({})
+          })
       })
     })
 
@@ -325,9 +286,9 @@ describe('Model', () => {
       it('should patch the removed field\'s URI and return the updated model', () => {
         const {patchSpy, webClient} = createFakeWebClient()
         const removedPhone = model.fields('phone')[1]
-        const modelMinusField = model.remove(removedPhone)
-        const uri = sourceConfig.defaultSources.listed
-        return modelMinusField
+        const uri = profileURI
+        return model
+          .remove(removedPhone)
           .save(rdf, webClient)
           .then(newModel => {
             expectWebCalls(webClient, patchSpy, [
@@ -345,75 +306,45 @@ describe('Model', () => {
     })
 
     describe('after updating fields', () => {
-      const testData = [
-        {
-          fieldData: {
-            value: 'tel:000-000-0000',
-            listed: true
-          },
-          expectedPatchCalls: [
-            [
-              sourceConfig.defaultSources.listed,
-              // Assume that we are updating the second phone number in the
-              // profile.
-              [`<${webId}> ${vocab.foaf('phone')} <tel:098-765-4321> .`],
-              [`<${webId}> ${vocab.foaf('phone')} <tel:000-000-0000> .`]
-            ]
+      it('should patch the new and removed field URIs for a field and update the model', () => {
+        const value = 'tel:000-000-0000'
+        const expectedPatchCalls = [
+          [
+            profileURI,
+            // Assume that we are updating the second phone number in the
+            // profile.
+            [`<${webId}> ${vocab.foaf('phone')} <tel:098-765-4321> .`],
+            [`<${webId}> ${vocab.foaf('phone')} <tel:000-000-0000> .`]
           ]
-        },
-        {
-          fieldData: {
-            value: 'tel:111-111-1111',
-            listed: false
-          },
-          expectedPatchCalls: [
-            [
-              sourceConfig.defaultSources.listed,
-              // Assume that we are updating the second phone number in the
-              // profile.
-              [`<${webId}> ${vocab.foaf('phone')} <tel:098-765-4321> .`],
-              []
-            ],
-            [
-              sourceConfig.defaultSources.unlisted,
-              [],
-              [`<${webId}> ${vocab.foaf('phone')} <tel:111-111-1111> .`]
-            ]
-          ]
-        }
-      ]
-      testData.forEach(({fieldData, expectedPatchCalls}) => {
-        const {value, listed} = fieldData
-        it(`should patch the new and removed field URIs for a ${listed ? 'listed' : 'unlisted'} field and update the model`, () => {
-          const {patchSpy, webClient} = createFakeWebClient()
-          const removedPhone = model.fields('phone')[1]
-          const updatedModel = model.set(removedPhone, value, {listed})
-          return updatedModel
-            .save(rdf, webClient)
-            .then(newModel => {
-              expectWebCalls(webClient, patchSpy, expectedPatchCalls)
-              expect(newModel.fields('phone').length).toBe(2)
-              expect(newModel.diff(rdf)).toEqual({})
-            })
-        })
+        ]
+        const {patchSpy, webClient} = createFakeWebClient()
+        const removedPhone = model.fields('phone')[1]
+        const updatedModel = model.set(removedPhone, value)
+        return updatedModel
+          .save(rdf, webClient)
+          .then(newModel => {
+            expectWebCalls(webClient, patchSpy, expectedPatchCalls)
+            expect(newModel.fields('phone').length).toBe(2)
+            expect(newModel.diff(rdf)).toEqual({})
+          })
       })
     })
 
     describe('after a failed patch', () => {
       it('should return a model with updated fields for only those which were successfully updated', () => {
-        const listedURI = sourceConfig.defaultSources.listed
-        const unlistedURI = sourceConfig.defaultSources.unlisted
-        const {patchSpy, webClient} = createFakeWebClient({failPatchFor: unlistedURI})
-        let newModel = model.add('phone', 'tel:000-000-0000', {listed: true})
-        newModel = newModel.add('phone', 'tel:111-111-1111', {listed: false})
+        const successfulURI = profileURI
+        const unsuccessfulURI = 'https://example.com/resource-will-fail-to-patch'
+        const {patchSpy, webClient} = createFakeWebClient({failPatchFor: unsuccessfulURI})
+        let newModel = model.add('phone', 'tel:000-000-0000', {namedGraph: successfulURI})
+        newModel = newModel.add('phone', 'tel:111-111-1111', {namedGraph: unsuccessfulURI})
         const expectedPatchCalls = [
           [
-            listedURI,
+            successfulURI,
             [],
             [`<${webId}> ${vocab.foaf('phone')} "tel:000-000-0000" .`]
           ],
           [
-            unlistedURI,
+            unsuccessfulURI,
             [],
             [`<${webId}> ${vocab.foaf('phone')} "tel:111-111-1111" .`]
           ]
@@ -433,7 +364,7 @@ describe('Model', () => {
             expect(phoneNotPatched.originalQuad(rdf, subject)).toBe(null)
             // Verify useful data was properly stored on the error
             expect(err.diffMap).toEqual(newModel.diff(rdf))
-            expect(err.failedURIs).toEqual(new Set([unlistedURI]))
+            expect(err.failedURIs).toEqual(new Set([unsuccessfulURI]))
           })
       })
     })

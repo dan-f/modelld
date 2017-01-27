@@ -41,31 +41,16 @@ Here's how you might use `modelld` to model part of a
 import { modelFactory } from 'modelld'
 import { vocab, rdflib, web } from 'solid-client'
 
-// Describes the default 'listed' (public) and 'unlisted' (private) URIs for the
-// model as well as which URIs (default and non-default) are considered
-// listed/unlisted.
-const sourceConfig = {
-  defaultSources: {
-    listed: 'https://...',
-    unlisted: 'https://...'
-  },
-  sourceIndex: {
-    'https://...': true,
-    'https://...': true,
-    'https://...': false,
-    'https://...': false
-  }
-}
-
-const profileModel = modelFactory(rdflib, sourceConfig, {
+const profileModel = modelFactory(rdflib, {
   name: vocab.foaf('name'),
   picture: vocab.foaf('img'),
   phone: vocab.foaf('phone')
 })
 
+const defaultGraph = 'https://me.databox.me/profile/card'
 const webId = 'https://me.databox.me/profile/card#me'
 // Suppose you've got an RDF graph named 'graph'
-const profile = profileModel(graph, webId)
+const profile = profileModel(graph, defaultGraph, webId)
 
 // Get the value of some fields
 profile.any('phone') // => 'tel:000-000-0000'
@@ -93,6 +78,9 @@ const name = profile.fields('name')[0]
 profile
   .set(name, 'Daniel')
   .any('name') // => 'Daniel'
+
+// Update the namedGraph for a field
+profile.setAny('name', {namedGraph: 'https://example.com/other-resource'})
 
 // Save a model back to the LDP server(s) it came from
 const name = profile.fields('name')[0]
